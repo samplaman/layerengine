@@ -1,0 +1,112 @@
+name: Continuous Release
+
+on:
+  push:
+    branches: [ main, master ]
+    tags:
+      - 'v*'
+  pull_request:
+    branches: [ main, master ]
+  workflow_dispatch:
+
+jobs:
+  build:
+    name: Build ${{ matrix.platform }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            platform: Linux
+          - os: macos-latest
+            platform: macOS
+          - os: windows-latest
+            platform: Windows
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+        with:
+          submodules: recursive
+
+      - name: Install Linux Dependencies
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libasound2-dev libjack-jackd2-dev \
+            libx11-dev libxcomposite-dev libxcursor-dev libxinerama-dev \
+            libxext-dev libxrandr-dev libwebkit2gtk-4.1-dev \
+            libglu1-mesa-dev mesa-common-dev freeglut3-dev
+
+      - name: Configure CMake
+        run: cmake -B build -DCMAKE_BUILD_TYPE=Release -DJUCE_BUILD_EXTRAS=OFF
+
+      - name: Build Plugin
+        run: cmake --build build --config Release --parallel $(nproc)
+
+      - name: Prepare Artifacts (Unix)
+        if: runner.os != 'Windows'
+        run: |
+          mkdir -p artifacts
+          # Find VST3
+          VST_PATH=$(find build/LayerEngine_artefacts -name "LayerEngine.vst3" -type d | head -n 1)
+          # Find Standalone
+          STANDALONE_PATH=$(find build/LayerEngine_artefacts -name "LayerEngine" -type f -executable | head -n 1)
+          
+          if [ -d "$VST_PATH" ]; then cp -r "$VST_PATH" artifacts/; fi
+          if [ -f "$STANDALONE_PATH" ]; then cp "$STANDALONE_PATH" artifacts/; fi
+          
+          cd artifacts && zip -r ../LayerEngine-${{ matrix.platform }}.zip .
+
+      - name: Prepare Artifacts (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force -Path artifacts
+          $vst = Get-ChildItem -Path build/LayerEngine_artefacts -Filter "LayerEngine.vst3" -Recurse | Select-Object -First 1
+          $exe = Get-ChildItem -Path build/LayerEngine_artefacts -Filter "LayerEngine.exe" -Recurse | Select-Object -First 1
+          
+          if ($vst) { Copy-Item -Path $vst.FullName -Destination artifacts/ -Recurse }
+          if ($exe) { Copy-Item -Path $exe.FullName -Destination artifacts/ }
+          
+          Compress-Archive -Path artifacts/* -DestinationPath LayerEngine-Windows.zip
+
+      - name: Upload Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: LayerEngine-${{ matrix.platform }}
+          path: LayerEngine-${{ matrix.platform }}.zip
+
+  release:
+    name: Create Release
+    needs: build
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push' && (github.ref == 'refs/heads/master' || github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/v'))
+    steps:
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+
+      - name: Set Release Tag
+        run: |
+          if [[ "${{ github.ref }}" == refs/tags/v* ]]; then
+            echo "TAG_NAME=${{ github.ref_name }}" >> $GITHUB_ENV
+            echo "IS_PRERELEASE=false" >> $GITHUB_ENV
+          else
+            echo "TAG_NAME=latest" >> $GITHUB_ENV
+            echo "IS_PRERELEASE=true" >> $GITHUB_ENV
+          fi
+
+      - name: Create/Update Release
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: ${{ env.TAG_NAME }}
+          name: LayerEngine ${{ env.TAG_NAME }}
+          files: |
+            LayerEngine-Linux/LayerEngine-Linux.zip
+            LayerEngine-macOS/LayerEngine-macOS.zip
+            LayerEngine-Windows/LayerEngine-Windows.zip
+          draft: false
+          prerelease: ${{ env.IS_PRERELEASE }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
