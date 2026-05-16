@@ -52,13 +52,15 @@ jobs:
       - name: Prepare Artifacts (Unix)
         if: runner.os != 'Windows'
         run: |
-          cd build/LayerEngine_artefacts/Release/VST3 || cd build/LayerEngine_artefacts/VST3
-          zip -r ../../../LayerEngine-${{ matrix.platform }}.zip LayerEngine.vst3
+          # Detect paths (Linux and macOS vary slightly in build output structure)
+          VST_PATH=$(find build/LayerEngine_artefacts -name "LayerEngine.vst3" -type d | head -n 1)
+          STANDALONE_PATH=$(find build/LayerEngine_artefacts -name "LayerEngine" -type f | head -n 1)
+          zip -r LayerEngine-${{ matrix.platform }}.zip "$VST_PATH" "$STANDALONE_PATH"
 
       - name: Prepare Artifacts (Windows)
         if: runner.os == 'Windows'
         run: |
-          Compress-Archive -Path build/LayerEngine_artefacts/Release/VST3/LayerEngine.vst3 -DestinationPath LayerEngine-Windows.zip
+          Compress-Archive -Path build/LayerEngine_artefacts/Release/VST3/LayerEngine.vst3, build/LayerEngine_artefacts/Release/Standalone/LayerEngine.exe -DestinationPath LayerEngine-Windows.zip
 
       - name: Upload Artifact
         uses: actions/upload-artifact@v3

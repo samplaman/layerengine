@@ -46,7 +46,9 @@ jobs:
         uses: actions/upload-artifact@v3
         with:
           name: LayerEngine-Windows
-          path: build/LayerEngine_artefacts/Release/VST3/LayerEngine.vst3
+          path: |
+            build/LayerEngine_artefacts/Release/VST3/LayerEngine.vst3
+            build/LayerEngine_artefacts/Release/Standalone/LayerEngine.exe
 
       - name: Upload Artifacts (macOS)
         if: runner.os == 'macOS'
@@ -60,4 +62,6 @@ jobs:
         uses: actions/upload-artifact@v3
         with:
           name: LayerEngine-Linux
-          path: build/LayerEngine_artefacts/VST3/LayerEngine.vst3
+          path: |
+            build/LayerEngine_artefacts/VST3/LayerEngine.vst3
+            build/LayerEngine_artefacts/Standalone/LayerEngine

@@ -51,4 +51,6 @@ jobs:
         uses: actions/upload-artifact@v3
         with:
           name: LayerEngine-Windows-Cross
-          path: build-win/LayerEngine_artefacts/Release/VST3/LayerEngine.vst3
+          path: |
+            build-win/LayerEngine_artefacts/Release/VST3/LayerEngine.vst3
+            build-win/LayerEngine_artefacts/Release/Standalone/LayerEngine.exe
