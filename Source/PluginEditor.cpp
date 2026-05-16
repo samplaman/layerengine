@@ -9,6 +9,8 @@ GranularSynthAudioProcessorEditor::GranularSynthAudioProcessorEditor(
                juce::MidiKeyboardComponent::horizontalKeyboard) {
   setLookAndFeel(&customLookAndFeel);
   setSize(950, 700);
+  setResizable(true, true);
+  setResizeLimits(800, 500, 1920, 1080);
 
   for (int i = 0; i < 4; ++i) {
     auto *layerUI = new LayerUI(audioProcessor.getLayer(i));
@@ -25,7 +27,7 @@ GranularSynthAudioProcessorEditor::GranularSynthAudioProcessorEditor(
   addAndMakeVisible(tabs);
   addAndMakeVisible(keyboard);
 
-  keyboard.setKeyWidth(40);
+  keyboard.setKeyWidth(12);
   keyboard.setScrollButtonsVisible(true);
   keyboard.setLowestVisibleKey(48);
 
@@ -63,6 +65,11 @@ GranularSynthAudioProcessorEditor::GranularSynthAudioProcessorEditor(
   addAndMakeVisible(modLabel);
 
   tabs.setIndent(15);
+
+  logoImage = juce::ImageFileFormat::loadFrom(BinaryData::logo_png,
+                                              BinaryData::logo_pngSize);
+  backgroundImage = juce::ImageFileFormat::loadFrom(
+      BinaryData::mountains_png, BinaryData::mountains_pngSize);
 }
 
 GranularSynthAudioProcessorEditor::~GranularSynthAudioProcessorEditor() {
@@ -70,16 +77,37 @@ GranularSynthAudioProcessorEditor::~GranularSynthAudioProcessorEditor() {
 }
 
 void GranularSynthAudioProcessorEditor::paint(juce::Graphics &g) {
-  g.fillAll(juce::Colour(0xff131212)); // HTML #131212ff
+  if (backgroundImage.isValid()) {
+    g.drawImageWithin(backgroundImage, 0, 0, getWidth(), getHeight(),
+                      juce::RectanglePlacement::fillDestination);
+    g.fillAll(juce::Colours::black.withAlpha(
+        0.2f)); // Lighter overlay for blurred background
+  } else {
+    g.fillAll(juce::Colour(0xff131212)); // HTML #131212ff
+  }
 
   // Header
-  g.setColour(juce::Colours::white);
-  g.setFont(juce::FontOptions(32.0f).withStyle("Bold"));
-  g.drawText("LAYER ENGINE", 20, 20, 400, 40, juce::Justification::left);
+  auto headerArea = getLocalBounds().removeFromTop(70).reduced(20, 15);
+  if (logoImage.isValid()) {
+    auto logoBounds = headerArea.removeFromLeft(180);
+    g.drawImageWithin(logoImage, logoBounds.getX(), logoBounds.getY(),
+                      logoBounds.getWidth(), logoBounds.getHeight(),
+                      juce::RectanglePlacement::xLeft |
+                          juce::RectanglePlacement::yMid |
+                          juce::RectanglePlacement::onlyReduceInSize);
+  } else {
+    g.setColour(juce::Colours::white);
+    g.setFont(juce::FontOptions(32.0f).withStyle("Bold"));
+    g.drawText("LAYER ENGINE", headerArea.removeFromLeft(200).getX(),
+               headerArea.getY(), 200, headerArea.getHeight(),
+               juce::Justification::left);
+  }
 
+  headerArea.removeFromLeft(20); // Gap
   g.setColour(juce::Colours::white.withAlpha(0.8f));
   g.setFont(juce::FontOptions(15.0f));
-  g.drawText("GRANULAR SYNTHESIS", 240, 20, 400, 40, juce::Justification::left);
+  g.drawText("", headerArea.getX(), headerArea.getY(), 300,
+             headerArea.getHeight(), juce::Justification::left);
 
   // Keyboard & Wheels Transparent Container
   auto bottomArea = getLocalBounds().removeFromBottom(100).reduced(15, 5);

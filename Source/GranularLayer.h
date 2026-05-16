@@ -51,6 +51,7 @@ public:
     ~GranularLayer();
 
     void loadSample(const juce::File& file);
+    void clearSample();
     void prepareToPlay(double sampleRate, int samplesPerBlock);
     void processBlock(juce::AudioBuffer<float>& buffer, juce::MidiBuffer& midiMessages);
 

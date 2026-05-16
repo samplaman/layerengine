@@ -23,7 +23,8 @@ public:
         setColour(juce::TextButton::textColourOnId, juce::Colours::white);
         
         setColour(juce::TabbedButtonBar::tabTextColourId, juce::Colours::white);
-        setColour(juce::TabbedButtonBar::tabOutlineColourId, accentWhite.withAlpha(0.5f));
+        setColour(juce::TabbedButtonBar::tabOutlineColourId, juce::Colours::transparentBlack);
+        setColour(juce::TabbedComponent::outlineColourId, juce::Colours::transparentBlack);
         
         setColour(juce::Label::textColourId, juce::Colours::white);
 
@@ -32,6 +33,84 @@ public:
         setColour(juce::MidiKeyboardComponent::blackNoteColourId, juce::Colour(0xff1a1a1a));
         setColour(juce::MidiKeyboardComponent::mouseOverKeyOverlayColourId, accentWhite.withAlpha(0.2f));
         setColour(juce::MidiKeyboardComponent::keyDownOverlayColourId, accentWhite.withAlpha(0.5f));
+    }
+
+    void drawTabButton (juce::TabBarButton& button, juce::Graphics& g, bool isMouseOver, bool isMouseDown) override
+    {
+        auto area = button.getLocalBounds().toFloat().reduced(2, 2);
+        bool isSelected = button.isFrontTab();
+        
+        if (isSelected || isMouseOver)
+        {
+            g.setColour(juce::Colours::white.withAlpha(isSelected ? 0.15f : 0.08f));
+            g.fillRoundedRectangle(area, 6.0f);
+            
+            g.setColour(juce::Colours::white.withAlpha(isSelected ? 0.4f : 0.2f));
+            g.drawRoundedRectangle(area, 6.0f, 1.0f);
+        }
+
+        g.setColour(isSelected ? juce::Colours::white : juce::Colours::white.withAlpha(0.6f));
+        g.setFont(juce::FontOptions(13.0f).withStyle(isSelected ? "Bold" : "Plain"));
+        g.drawText(button.getButtonText(), area, juce::Justification::centred);
+    }
+
+    void drawTabbedButtonBarBackground(juce::TabbedButtonBar&, juce::Graphics& g) override
+    {
+        // Keep it transparent
+    }
+
+    void drawTabAreaBehindFrontButton (juce::TabbedButtonBar&, juce::Graphics&, int, int) override
+    {
+        // Remove shadow under tab header
+    }
+
+    void drawComboBox (juce::Graphics& g, int width, int height, bool isButtonDown,
+                       int buttonX, int buttonY, int buttonW, int buttonH, juce::ComboBox& box) override
+    {
+        auto area = juce::Rectangle<int>(0, 0, width, height).toFloat().reduced(2);
+        
+        g.setColour(juce::Colours::white.withAlpha(0.1f));
+        g.fillRoundedRectangle(area, 4.0f);
+        
+        g.setColour(juce::Colours::white.withAlpha(0.2f));
+        g.drawRoundedRectangle(area, 4.0f, 1.0f);
+        
+        // Draw the little arrow
+        juce::Path p;
+        float arrowSize = 0.25f * (float)juce::jmin(buttonW, buttonH);
+        p.addTriangle((float)buttonX + (float)buttonW * 0.5f - arrowSize, (float)buttonY + (float)buttonH * 0.5f - arrowSize * 0.5f,
+                      (float)buttonX + (float)buttonW * 0.5f + arrowSize, (float)buttonY + (float)buttonH * 0.5f - arrowSize * 0.5f,
+                      (float)buttonX + (float)buttonW * 0.5f, (float)buttonY + (float)buttonH * 0.5f + arrowSize * 0.5f);
+        
+        g.setColour(juce::Colours::white.withAlpha(0.6f));
+        g.fillPath(p);
+    }
+
+    void drawPopupMenuBackground (juce::Graphics& g, int width, int height) override
+    {
+        g.setColour(juce::Colour(0xff2d3436).withAlpha(0.95f)); // Darker for readability
+        g.fillRoundedRectangle(0, 0, (float)width, (float)height, 6.0f);
+        
+        g.setColour(juce::Colours::white.withAlpha(0.15f));
+        g.drawRoundedRectangle(0.5f, 0.5f, (float)width - 1.0f, (float)height - 1.0f, 6.0f, 1.0f);
+    }
+
+    void drawPopupMenuItem (juce::Graphics& g, const juce::Rectangle<int>& area,
+                           bool isSeparator, bool isActive, bool isHighlighted, bool isChecked, bool isEnabled,
+                           const juce::String& text, const juce::String& shortcutKeyText,
+                           const juce::Drawable* icon, const juce::Colour* textColourToUse) override
+    {
+        if (isHighlighted && isEnabled)
+        {
+            g.setColour(juce::Colours::white.withAlpha(0.15f));
+            g.fillRect(area.reduced(2));
+        }
+
+        g.setColour(isEnabled ? juce::Colours::white : juce::Colours::white.withAlpha(0.3f));
+        g.setFont(juce::FontOptions(13.0f));
+
+        auto r = area.reduced(10, 0);
+        g.drawText(text, r, juce::Justification::centredLeft, true);
     }
 
     void drawRotarySlider(juce::Graphics& g, int x, int y, int width, int height, float sliderPos,
@@ -150,6 +229,13 @@ public:
             });
         };
 
+        addAndMakeVisible(clearButton);
+        clearButton.setButtonText("CLEAR");
+        clearButton.onClick = [this] {
+            this->layer.clearSample();
+            sampleNameLabel.setText("READY FOR SAMPLE", juce::dontSendNotification);
+        };
+
         addAndMakeVisible(sampleNameLabel);
         sampleNameLabel.setText("READY FOR SAMPLE", juce::dontSendNotification);
         sampleNameLabel.setFont(juce::FontOptions(14.0f).withStyle("Bold"));
@@ -223,14 +309,21 @@ public:
 
     void paint(juce::Graphics& g) override
     {
-        // Transparent background
+        auto area = getLocalBounds().toFloat().reduced(5);
+        g.setColour(juce::Colours::white.withAlpha(0.07f));
+        g.fillRoundedRectangle(area, 10.0f);
+        
+        g.setColour(juce::Colours::white.withAlpha(0.15f));
+        g.drawRoundedRectangle(area, 10.0f, 1.5f);
     }
 
     void resized() override
     {
         auto area = getLocalBounds().reduced(20);
         auto top = area.removeFromTop(40);
-        loadButton.setBounds(top.removeFromLeft(130).reduced(0, 5));
+        loadButton.setBounds(top.removeFromLeft(120).reduced(0, 5));
+        top.removeFromLeft(10);
+        clearButton.setBounds(top.removeFromLeft(70).reduced(0, 5));
         sampleNameLabel.setBounds(top.reduced(15, 0));
 
         viewer.setBounds(area.removeFromTop(130).reduced(0, 10));
@@ -255,7 +348,7 @@ public:
         sizeRandSlider.setBounds(jitterRow.removeFromLeft(jitW).reduced(6));
         scanSpeedSlider.setBounds(jitterRow.removeFromLeft(jitW).reduced(6));
         revProbSlider.setBounds(jitterRow.removeFromLeft(jitW).reduced(6));
-        windowShapeCombo.setBounds(jitterRow.removeFromLeft(jitW).reduced(12, 35));
+        windowShapeCombo.setBounds(jitterRow.removeFromLeft(jitW).reduced(12, 20));
 
         area.removeFromTop(10);
 
@@ -305,6 +398,7 @@ private:
     GranularLayer& layer;
     WaveformViewer viewer;
     juce::TextButton loadButton;
+    juce::TextButton clearButton;
     juce::Label sampleNameLabel;
     juce::Label granLabel, filterLabel, envLabel;
     juce::Slider posSlider, sizeSlider, densSlider, pitchSlider;
@@ -332,7 +426,12 @@ public:
 
     void paint(juce::Graphics& g) override
     {
-        // Transparent background
+        auto area = getLocalBounds().toFloat().reduced(10);
+        g.setColour(juce::Colours::white.withAlpha(0.07f));
+        g.fillRoundedRectangle(area, 10.0f);
+        
+        g.setColour(juce::Colours::white.withAlpha(0.15f));
+        g.drawRoundedRectangle(area, 10.0f, 1.5f);
     }
 
     void resized() override
@@ -393,7 +492,12 @@ public:
 
     void paint(juce::Graphics& g) override
     {
-        // Transparent
+        auto area = getLocalBounds().toFloat().reduced(10);
+        g.setColour(juce::Colours::white.withAlpha(0.07f));
+        g.fillRoundedRectangle(area, 10.0f);
+        
+        g.setColour(juce::Colours::white.withAlpha(0.15f));
+        g.drawRoundedRectangle(area, 10.0f, 1.5f);
     }
 
     void resized() override
@@ -432,6 +536,8 @@ private:
     juce::Label pitchLabel, modLabel;
 
     CustomLookAndFeel customLookAndFeel;
+    juce::Image logoImage;
+    juce::Image backgroundImage;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (GranularSynthAudioProcessorEditor)
 };

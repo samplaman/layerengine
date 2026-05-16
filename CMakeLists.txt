@@ -25,6 +25,12 @@ juce_add_plugin(LayerEngine
     FORMATS AU VST3 Standalone
 )
 
+juce_add_binary_data(Assets
+    SOURCES
+        assets/logo.png
+        assets/mountains.png
+)
+
 target_sources(LayerEngine PRIVATE
     Source/PluginProcessor.cpp
     Source/PluginProcessor.h
@@ -43,6 +49,7 @@ target_compile_definitions(LayerEngine PRIVATE
 )
 
 target_link_libraries(LayerEngine PRIVATE
+    Assets
     juce::juce_audio_utils
     juce::juce_audio_processors
     juce::juce_gui_extra

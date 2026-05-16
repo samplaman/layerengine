@@ -28,6 +28,18 @@ void GranularLayer::loadSample(const juce::File& file)
     }
 }
 
+void GranularLayer::clearSample()
+{
+    const juce::ScopedLock sl(lock);
+    sampleBuffer.setSize(0, 0);
+    
+    for (auto& grain : grains)
+        grain.active = false;
+        
+    adsr.reset();
+    activeNoteNumbers.clear();
+}
+
 void GranularLayer::prepareToPlay(double sampleRate, int samplesPerBlock)
 {
     currentSampleRate = sampleRate;

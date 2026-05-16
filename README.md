@@ -3,6 +3,10 @@
 # Layer Engine
 
 <p align="center">
+  <img src="assets/logo.png" alt="Layer Engine Logo" width="300">
+</p>
+
+<p align="center">
   <a href="https://github.com/samplaman/layerengine/actions/workflows/build.yml">
     <img src="https://github.com/samplaman/layerengine/actions/workflows/build.yml/badge.svg" alt="Build Status">
   </a>
@@ -28,7 +32,7 @@
   - **State Variable Filter (SVF)**: High-quality TPT filter with Cutoff and Resonance controls per layer.
 - **Stereo Imaging**: Integrated **Pan** and **Stereo Spread** controls per layer to create wide, immersive soundscapes.
 - **Visual Feedback**: Real-time grain visualization and sample waveform display.
-- **Modern UI**: High-contrast, premium dark interface designed for professional studio environments.
+- **Modern UI**: High-contrast, premium dark interface featuring a cinematic mountain background and glassmorphism design for professional studio environments.
 
 ## 🛠 Tech Stack
 
