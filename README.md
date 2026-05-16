@@ -5,6 +5,9 @@
 ![Lint](https://github.com/USERNAME/REPO_NAME/actions/workflows/lint.yml/badge.svg)
 ![Release](https://github.com/USERNAME/REPO_NAME/actions/workflows/release.yml/badge.svg)
 
+> [!NOTE]
+> To activate these status badges, replace `USERNAME/REPO_NAME` in the URL above with your actual GitHub repository details after pushing.
+
 **Yabba** (internally known as **Layer Engine**) is a high-performance, professional-grade quad-layer granular synthesizer built with C++ and the JUCE framework. Designed for deep sound design and atmospheric textures, Yabba allows users to stack up to four independent granular engines, each with its own modulation, filtering, and spatialization controls.
 
 ## 🚀 Key Features
