@@ -38,10 +38,7 @@ jobs:
             libxext-dev libxrandr-dev libwebkit2gtk-4.0-dev \
             libglu1-mesa-dev mesa-common-dev freeglut3-dev
 
-      - name: Setup CMake
-        uses: jwlawrence/actions-setup-cmake@v1.1
-        with:
-          cmake-version: '3.22.x'
+      # CMake is pre-installed on GitHub-hosted runners
 
       - name: Configure CMake
         run: cmake -B build -DCMAKE_BUILD_TYPE=Release -DJUCE_BUILD_EXTRAS=ON
@@ -63,7 +60,7 @@ jobs:
           Compress-Archive -Path build/LayerEngine_artefacts/Release/VST3/LayerEngine.vst3, build/LayerEngine_artefacts/Release/Standalone/LayerEngine.exe -DestinationPath LayerEngine-Windows.zip
 
       - name: Upload Artifact
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: LayerEngine-${{ matrix.platform }}
           path: LayerEngine-${{ matrix.platform }}.zip
@@ -74,7 +71,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Download all artifacts
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v4
 
       - name: Create Release
         uses: softprops/action-gh-release@v1
