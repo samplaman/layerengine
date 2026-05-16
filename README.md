@@ -21,7 +21,7 @@
 
 ---
 
-**Yabba** (internally known as **Layer Engine**) is a high-performance, professional-grade quad-layer granular synthesizer built with C++ and the JUCE framework. Designed for deep sound design and atmospheric textures, Yabba allows users to stack up to four independent granular engines, each with its own modulation, filtering, and spatialization controls.
+**Layer Engine** is a high-performance, professional-grade quad-layer granular synthesizer built with C++ and the JUCE framework. Designed for deep sound design and atmospheric textures, Yabba allows users to stack up to four independent granular engines, each with its own modulation, filtering, and spatialization controls.
 
 ## 🚀 Key Features
 
