@@ -1,0 +1,23 @@
+name: Lint
+
+on:
+  push:
+    branches: [ main, master ]
+  pull_request:
+    branches: [ main, master ]
+
+jobs:
+  cpp-lint:
+    name: C++ Linting
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Install clang-format
+        run: sudo apt-get install -y clang-format
+
+      - name: Run clang-format
+        run: |
+          # Find all .cpp and .h files in Source and check formatting
+          find Source -name "*.cpp" -o -name "*.h" | xargs clang-format --dry-run --Werror

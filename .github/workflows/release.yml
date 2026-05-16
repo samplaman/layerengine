@@ -1,0 +1,87 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  build:
+    name: Build ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            platform: Linux
+            ext: .vst3
+          - os: macos-latest
+            platform: macOS
+            ext: .vst3
+          - os: windows-latest
+            platform: Windows
+            ext: .vst3
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+        with:
+          submodules: recursive
+
+      - name: Install Linux Dependencies
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libasound2-dev libjack-jackd2-dev \
+            libx11-dev libxcomposite-dev libxcursor-dev libxinerama-dev \
+            libxext-dev libxrandr-dev libwebkit2gtk-4.0-dev \
+            libglu1-mesa-dev mesa-common-dev freeglut3-dev
+
+      - name: Setup CMake
+        uses: jwlawrence/actions-setup-cmake@v1.1
+        with:
+          cmake-version: '3.22.x'
+
+      - name: Configure CMake
+        run: cmake -B build -DCMAKE_BUILD_TYPE=Release -DJUCE_BUILD_EXTRAS=ON
+
+      - name: Build Plugin
+        run: cmake --build build --config Release --parallel 4
+
+      - name: Prepare Artifacts (Unix)
+        if: runner.os != 'Windows'
+        run: |
+          cd build/LayerEngine_artefacts/Release/VST3 || cd build/LayerEngine_artefacts/VST3
+          zip -r ../../../LayerEngine-${{ matrix.platform }}.zip LayerEngine.vst3
+
+      - name: Prepare Artifacts (Windows)
+        if: runner.os == 'Windows'
+        run: |
+          Compress-Archive -Path build/LayerEngine_artefacts/Release/VST3/LayerEngine.vst3 -DestinationPath LayerEngine-Windows.zip
+
+      - name: Upload Artifact
+        uses: actions/upload-artifact@v3
+        with:
+          name: LayerEngine-${{ matrix.platform }}
+          path: LayerEngine-${{ matrix.platform }}.zip
+
+  release:
+    name: Create Release
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download all artifacts
+        uses: actions/download-artifact@v3
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v1
+        with:
+          files: |
+            LayerEngine-Linux/LayerEngine-Linux.zip
+            LayerEngine-macOS/LayerEngine-macOS.zip
+            LayerEngine-Windows/LayerEngine-Windows.zip
+          draft: false
+          prerelease: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

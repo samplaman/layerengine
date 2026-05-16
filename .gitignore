@@ -1,0 +1,17 @@
+# Compilation artifacts
+build/
+build-win/
+bin/
+obj/
+
+# Toolchains
+llvm-mingw-*/
+
+# IDEs
+.vscode/
+.idea/
+*.user
+
+# System files
+.DS_Store
+Thumbs.db
