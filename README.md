@@ -1,18 +1,10 @@
-<p align="center">
-  <img src="assets/header.png" alt="Yabba Layer Engine" width="100%">
-</p>
 
-# Yabba: The Layer Engine
+
+# Layer Engine
 
 <p align="center">
   <a href="https://github.com/samplaman/layerengine/actions/workflows/build.yml">
     <img src="https://github.com/samplaman/layerengine/actions/workflows/build.yml/badge.svg" alt="Build Status">
-  </a>
-  <a href="https://github.com/samplaman/layerengine/actions/workflows/cross-build.yml">
-    <img src="https://github.com/samplaman/layerengine/actions/workflows/cross-build.yml/badge.svg" alt="Cross-Compile Status">
-  </a>
-  <a href="https://github.com/samplaman/layerengine/actions/workflows/lint.yml">
-    <img src="https://github.com/samplaman/layerengine/actions/workflows/lint.yml/badge.svg" alt="Lint Status">
   </a>
   <a href="https://github.com/samplaman/layerengine/actions/workflows/release.yml">
     <img src="https://github.com/samplaman/layerengine/actions/workflows/release.yml/badge.svg" alt="Release Status">
