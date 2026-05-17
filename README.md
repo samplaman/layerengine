@@ -21,7 +21,7 @@
 
 ---
 
-**Layer Engine** is a high-performance, professional-grade quad-layer granular synthesizer built with C++ and the JUCE framework. Designed for deep sound design and atmospheric textures, Yabba allows users to stack up to four independent granular engines, each with its own modulation, filtering, and spatialization controls.
+**Layer Engine** is a high-performance, professional-grade quad-layer granular synthesizer built with C++ and the JUCE framework. Designed for deep sound design and atmospheric textures, LayerEngine allows users to stack up to four independent granular engines, each with its own modulation, filtering, and spatialization controls.
 
 ## 🚀 Key Features
 
@@ -35,13 +35,16 @@
   - **ADSR Envelope**: Dedicated envelope per layer for precise amplitude shaping.
   - **State Variable Filter (SVF)**: High-quality TPT filter with Cutoff and Resonance controls per layer.
 - **Stereo Imaging**: Integrated **Pan** and **Stereo Spread** controls per layer to create wide, immersive soundscapes.
+- **Global FX Suite**: Overhauled master effects engine featuring **Stereo Chorus**, **Master Low-pass Filter**, and a brick-wall **Limiter** to prevent clipping.
+- **Precision Mixing Console**: Dedicated **Mixer** page featuring vertical sliders with per-layer **Mute (M)** and **Solo (S)** controls.
+- **Bidirectional MIDI Feedback**: Real-time synchronization of **Pitch** and **Modulation** wheels with incoming MIDI data and DAW automation.
 - **Visual Feedback**: Real-time grain visualization and sample waveform display.
-- **Modern UI**: High-contrast, premium dark interface featuring a cinematic mountain background and glassmorphism design for professional studio environments.
+- **Modern UI**: High-contrast, premium glassmorphism interface featuring a tabbed navbar next to the logo, borderless circular About button, and dynamic visual styling.
 
 ## 🛠 Tech Stack
 
 - **Core**: C++17
-- **Framework**: JUCE 7
+- **Framework**: JUCE 8
 - **DSP**: JUCE DSP Module (TPT Filters, ADSR)
 - **Build System**: CMake
 - **Cross-Compilation**: LLVM-MinGW (for Linux-to-Windows VST3 deployment)
