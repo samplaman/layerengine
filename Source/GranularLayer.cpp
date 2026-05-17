@@ -169,7 +169,7 @@ void GranularLayer::spawnGrain()
     }
 }
 
-void GranularLayer::processBlock(juce::AudioBuffer<float>& buffer, juce::MidiBuffer& midiMessages)
+void GranularLayer::processBlock(juce::AudioBuffer<float>& buffer, juce::MidiBuffer& midiMessages, float gain)
 {
     const juce::ScopedTryLock sl(lock);
     if (!sl.isLocked()) return;
@@ -264,5 +264,5 @@ void GranularLayer::processBlock(juce::AudioBuffer<float>& buffer, juce::MidiBuf
 
     // Add to main buffer
     for (int ch = 0; ch < buffer.getNumChannels(); ++ch)
-        buffer.addFrom(ch, 0, layerBuffer, ch % 2, 0, numSamples, 1.0f);
+        buffer.addFrom(ch, 0, layerBuffer, ch % 2, 0, numSamples, gain);
 }

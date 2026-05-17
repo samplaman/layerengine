@@ -37,13 +37,48 @@ public:
     juce::dsp::Reverb& getReverb() { return reverb; }
     juce::dsp::Reverb::Parameters& getReverbParams() { return reverbParams; }
 
+    struct FXParams {
+        float chorusRate = 1.0f;
+        float chorusDepth = 0.2f;
+        float chorusMix = 0.0f;
+        
+        float filterCutoff = 20000.0f;
+        float filterResonance = 0.1f;
+        
+        float limiterThreshold = 0.0f; // dB
+        float limiterRelease = 100.0f; // ms
+    };
+    FXParams& getFXParams() { return fxParams; }
+
+    float getPitchBend() const { return lastPitchBend; }
+    void setPitchBend(float val) {
+        lastPitchBend = val;
+        for (auto& layer : layers)
+            layer.getParams().pitchBend = val;
+    }
+
+    float getModulation() const { return lastModulation; }
+    void setModulation(float val) {
+        lastModulation = val;
+        for (auto& layer : layers)
+            layer.getParams().position = val;
+    }
+
 private:
     std::array<GranularLayer, 4> layers;
     juce::MidiKeyboardState keyboardState;
     
+    float lastPitchBend = 0.0f;
+    float lastModulation = 0.0f;
+    
     // Global Effects
     juce::dsp::Reverb reverb;
     juce::dsp::Reverb::Parameters reverbParams;
+    
+    juce::dsp::Chorus<float> chorus;
+    juce::dsp::StateVariableTPTFilter<float> masterFilter;
+    juce::dsp::Limiter<float> limiter;
+    FXParams fxParams;
     
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (GranularSynthAudioProcessor)
 };

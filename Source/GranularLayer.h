@@ -42,6 +42,10 @@ struct GranularParams
     // Filter
     float filterCutoff = 20000.0f;
     float filterResonance = 0.7f;
+
+    // Mute / Solo
+    bool isMuted = false;
+    bool isSoloed = false;
 };
 
 class GranularLayer
@@ -53,7 +57,7 @@ public:
     void loadSample(const juce::File& file);
     void clearSample();
     void prepareToPlay(double sampleRate, int samplesPerBlock);
-    void processBlock(juce::AudioBuffer<float>& buffer, juce::MidiBuffer& midiMessages);
+    void processBlock(juce::AudioBuffer<float>& buffer, juce::MidiBuffer& midiMessages, float gain = 1.0f);
 
     GranularParams& getParams() { return params; }
     bool hasSample() const { return sampleBuffer.getNumSamples() > 0; }
