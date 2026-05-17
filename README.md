@@ -1,5 +1,3 @@
-
-
 # Layer Engine
 
 <p align="center">
