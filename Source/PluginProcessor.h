@@ -69,6 +69,26 @@ public:
             layer.getParams().position = val;
     }
 
+    // MIDI Mappings
+    bool hasMidiMapping(const juce::String& paramId) const;
+    int getMidiMappingCC(const juce::String& paramId) const;
+    void setMidiMapping(const juce::String& paramId, int ccNumber);
+    void removeMidiMapping(const juce::String& paramId);
+    void clearAllMidiMappings();
+    
+    juce::String getLearningParamID() const {
+        juce::ScopedLock sl(midiLock);
+        return learningParamID;
+    }
+    void setLearningParamID(const juce::String& paramId) {
+        juce::ScopedLock sl(midiLock);
+        learningParamID = paramId;
+    }
+
+    float getParameterValue(const juce::String& paramId) const;
+    void setParameterValue(const juce::String& paramId, float newValue);
+    float mapCCValueToParam(const juce::String& paramId, float ccNormalized);
+
 private:
     std::array<GranularLayer, 4> layers;
     juce::MidiKeyboardState keyboardState;
@@ -84,6 +104,10 @@ private:
     juce::dsp::StateVariableTPTFilter<float> masterFilter;
     juce::dsp::Limiter<float> limiter;
     FXParams fxParams;
+
+    std::map<juce::String, int> midiMappings;
+    juce::String learningParamID;
+    mutable juce::CriticalSection midiLock;
     
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (GranularSynthAudioProcessor)
 };

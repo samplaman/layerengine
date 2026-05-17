@@ -13,7 +13,7 @@ FetchContent_Declare(
 FetchContent_MakeAvailable(JUCE)
 
 juce_add_plugin(LayerEngine
-    COMPANY_NAME "Eoin ODowd"
+    COMPANY_NAME "Eoin O Dowd"
     BUNDLE_ID "com.eoinodowd.layerengine"
     IS_SYNTH TRUE
     NEEDS_MIDI_INPUT TRUE

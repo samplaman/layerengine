@@ -13,7 +13,7 @@ GranularSynthAudioProcessorEditor::GranularSynthAudioProcessorEditor(
   setResizeLimits(800, 500, 1920, 1080);
 
   for (int i = 0; i < 4; ++i) {
-    auto *layerUI = new LayerUI(audioProcessor.getLayer(i));
+    auto *layerUI = new LayerUI(audioProcessor, i);
     tabs.addTab("LAYER " + juce::String(i + 1), juce::Colours::transparentBlack,
                 layerUI, true);
   }

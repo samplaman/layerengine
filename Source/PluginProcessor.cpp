@@ -54,9 +54,34 @@ void GranularSynthAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer
         {
             lastPitchBend = (float)(msg.getPitchWheelValue() - 8192) / 8192.0f;
         }
-        else if (msg.isController() && msg.getControllerNumber() == 1)
+        else if (msg.isController())
         {
-            lastModulation = (float)msg.getControllerValue() / 127.0f;
+            int ccNumber = msg.getControllerNumber();
+            float ccNormalized = (float)msg.getControllerValue() / 127.0f;
+            
+            juce::ScopedLock sl(midiLock);
+            
+            // If in MIDI learn mode, map the touched controller to this parameter
+            if (learningParamID.isNotEmpty())
+            {
+                midiMappings[learningParamID] = ccNumber;
+                learningParamID = ""; // Exit learn mode
+            }
+            
+            // Apply controller value to all mapped parameters
+            for (auto const& [paramId, mappedCC] : midiMappings)
+            {
+                if (mappedCC == ccNumber)
+                {
+                    float mappedVal = mapCCValueToParam(paramId, ccNormalized);
+                    setParameterValue(paramId, mappedVal);
+                }
+            }
+            
+            if (ccNumber == 1)
+            {
+                lastModulation = ccNormalized;
+            }
         }
     }
 
@@ -180,6 +205,16 @@ void GranularSynthAudioProcessor::getStateInformation (juce::MemoryBlock& destDa
         xmlLayer->setAttribute ("isSoloed", p.isSoloed);
     }
     
+    // 3. MIDI Mappings
+    auto* xmlMappings = xmlState.createNewChildElement ("MidiMappings");
+    juce::ScopedLock sl (midiLock);
+    for (auto const& [paramId, ccNumber] : midiMappings)
+    {
+        auto* xmlMap = xmlMappings->createNewChildElement ("Map");
+        xmlMap->setAttribute ("paramId", paramId);
+        xmlMap->setAttribute ("ccNumber", ccNumber);
+    }
+    
     // Save to memory
     copyXmlToBinary (xmlState, destData);
 }
@@ -268,7 +303,223 @@ void GranularSynthAudioProcessor::setStateInformation (const void* data, int siz
                 }
             }
         }
+        
+        // 3. Restore MIDI Mappings
+        if (auto* xmlMappings = xmlState->getChildByName ("MidiMappings"))
+        {
+            juce::ScopedLock sl (midiLock);
+            midiMappings.clear();
+            for (auto* xmlMap : xmlMappings->getChildIterator())
+            {
+                if (xmlMap->hasTagName ("Map"))
+                {
+                    juce::String paramId = xmlMap->getStringAttribute ("paramId");
+                    int ccNumber = xmlMap->getIntAttribute ("ccNumber", -1);
+                    if (paramId.isNotEmpty() && ccNumber >= 0)
+                    {
+                        midiMappings[paramId] = ccNumber;
+                    }
+                }
+            }
+        }
     }
+}
+
+bool GranularSynthAudioProcessor::hasMidiMapping(const juce::String& paramId) const
+{
+    juce::ScopedLock sl (midiLock);
+    return midiMappings.find(paramId) != midiMappings.end();
+}
+
+int GranularSynthAudioProcessor::getMidiMappingCC(const juce::String& paramId) const
+{
+    juce::ScopedLock sl (midiLock);
+    auto it = midiMappings.find(paramId);
+    if (it != midiMappings.end())
+        return it->second;
+    return -1;
+}
+
+void GranularSynthAudioProcessor::setMidiMapping(const juce::String& paramId, int ccNumber)
+{
+    juce::ScopedLock sl (midiLock);
+    midiMappings[paramId] = ccNumber;
+}
+
+void GranularSynthAudioProcessor::removeMidiMapping(const juce::String& paramId)
+{
+    juce::ScopedLock sl (midiLock);
+    midiMappings.erase(paramId);
+}
+
+void GranularSynthAudioProcessor::clearAllMidiMappings()
+{
+    juce::ScopedLock sl (midiLock);
+    midiMappings.clear();
+}
+
+float GranularSynthAudioProcessor::getParameterValue(const juce::String& paramId) const
+{
+    if (paramId.startsWith("layer/"))
+    {
+        auto tokens = juce::StringArray::fromTokens(paramId, "/", "");
+        if (tokens.size() == 3)
+        {
+            int layerIndex = tokens[1].getIntValue();
+            if (layerIndex >= 0 && layerIndex < 4)
+            {
+                auto* nonConstThis = const_cast<GranularSynthAudioProcessor*>(this);
+                auto& p = nonConstThis->getLayer(layerIndex).getParams();
+                auto name = tokens[2];
+                if (name == "position") return p.position;
+                if (name == "size") return p.size;
+                if (name == "density") return p.density;
+                if (name == "pitch") return p.pitch;
+                if (name == "volume") return p.volume;
+                if (name == "posRandomness") return p.posRandomness;
+                if (name == "pitchRandomness") return p.pitchRandomness;
+                if (name == "sizeRandomness") return p.sizeRandomness;
+                if (name == "pan") return p.pan;
+                if (name == "spread") return p.spread;
+                if (name == "scanSpeed") return p.scanSpeed;
+                if (name == "reverseProbability") return p.reverseProbability;
+                if (name == "filterCutoff") return p.filterCutoff;
+                if (name == "filterResonance") return p.filterResonance;
+                if (name == "attack") return p.attack;
+                if (name == "decay") return p.decay;
+                if (name == "sustain") return p.sustain;
+                if (name == "release") return p.release;
+            }
+        }
+    }
+    else if (paramId.startsWith("global/"))
+    {
+        auto name = paramId.substring(7);
+        if (name == "reverbSize") return reverbParams.roomSize;
+        if (name == "reverbWet") return reverbParams.wetLevel;
+        if (name == "chorusRate") return fxParams.chorusRate;
+        if (name == "chorusDepth") return fxParams.chorusDepth;
+        if (name == "chorusMix") return fxParams.chorusMix;
+        if (name == "filterCutoff") return fxParams.filterCutoff;
+        if (name == "filterResonance") return fxParams.filterResonance;
+        if (name == "limiterThreshold") return fxParams.limiterThreshold;
+        if (name == "limiterRelease") return fxParams.limiterRelease;
+    }
+    return 0.0f;
+}
+
+void GranularSynthAudioProcessor::setParameterValue(const juce::String& paramId, float val)
+{
+    if (paramId.startsWith("layer/"))
+    {
+        auto tokens = juce::StringArray::fromTokens(paramId, "/", "");
+        if (tokens.size() == 3)
+        {
+            int layerIndex = tokens[1].getIntValue();
+            if (layerIndex >= 0 && layerIndex < 4)
+            {
+                auto& p = getLayer(layerIndex).getParams();
+                auto name = tokens[2];
+                if (name == "position") p.position = val;
+                else if (name == "size") p.size = val;
+                else if (name == "density") p.density = val;
+                else if (name == "pitch") p.pitch = val;
+                else if (name == "volume") p.volume = val;
+                else if (name == "posRandomness") p.posRandomness = val;
+                else if (name == "pitchRandomness") p.pitchRandomness = val;
+                else if (name == "sizeRandomness") p.sizeRandomness = val;
+                else if (name == "pan") p.pan = val;
+                else if (name == "spread") p.spread = val;
+                else if (name == "scanSpeed") p.scanSpeed = val;
+                else if (name == "reverseProbability") p.reverseProbability = val;
+                else if (name == "filterCutoff") p.filterCutoff = val;
+                else if (name == "filterResonance") p.filterResonance = val;
+                else if (name == "attack") p.attack = val;
+                else if (name == "decay") p.decay = val;
+                else if (name == "sustain") p.sustain = val;
+                else if (name == "release") p.release = val;
+            }
+        }
+    }
+    else if (paramId.startsWith("global/"))
+    {
+        auto name = paramId.substring(7);
+        if (name == "reverbSize") reverbParams.roomSize = val;
+        else if (name == "reverbWet") reverbParams.wetLevel = val;
+        else if (name == "chorusRate") fxParams.chorusRate = val;
+        else if (name == "chorusDepth") fxParams.chorusDepth = val;
+        else if (name == "chorusMix") fxParams.chorusMix = val;
+        else if (name == "filterCutoff") fxParams.filterCutoff = val;
+        else if (name == "filterResonance") fxParams.filterResonance = val;
+        else if (name == "limiterThreshold") fxParams.limiterThreshold = val;
+        else if (name == "limiterRelease") fxParams.limiterRelease = val;
+    }
+}
+
+float GranularSynthAudioProcessor::mapCCValueToParam(const juce::String& paramId, float ccNormalized)
+{
+    if (paramId.endsWith("/position") || paramId.endsWith("/posRandomness") || 
+        paramId.endsWith("/pitchRandomness") || paramId.endsWith("/sizeRandomness") || 
+        paramId.endsWith("/spread") || paramId.endsWith("/reverseProbability") || 
+        paramId.endsWith("/sustain") || paramId.endsWith("reverbSize") || 
+        paramId.endsWith("reverbWet") || paramId.endsWith("chorusDepth") || 
+        paramId.endsWith("chorusMix"))
+    {
+        return ccNormalized;
+    }
+    if (paramId.endsWith("/volume"))
+    {
+        return ccNormalized;
+    }
+    if (paramId.endsWith("/size"))
+    {
+        return juce::jmap(ccNormalized, 0.01f, 1.0f);
+    }
+    if (paramId.endsWith("/density"))
+    {
+        return juce::jmap(ccNormalized, 1.0f, 100.0f);
+    }
+    if (paramId.endsWith("/pitch"))
+    {
+        return juce::jmap(ccNormalized, 0.1f, 4.0f);
+    }
+    if (paramId.endsWith("/pan"))
+    {
+        return juce::jmap(ccNormalized, -1.0f, 1.0f);
+    }
+    if (paramId.endsWith("/scanSpeed"))
+    {
+        return juce::jmap(ccNormalized, -2.0f, 2.0f);
+    }
+    if (paramId.endsWith("/filterCutoff"))
+    {
+        return 20.0f * std::pow(1000.0f, ccNormalized);
+    }
+    if (paramId.endsWith("/filterResonance") || paramId.endsWith("filterResonance"))
+    {
+        return juce::jmap(ccNormalized, 0.1f, 2.0f);
+    }
+    if (paramId.endsWith("/attack") || paramId.endsWith("/decay"))
+    {
+        return juce::jmap(ccNormalized, 0.01f, 2.0f);
+    }
+    if (paramId.endsWith("/release"))
+    {
+        return juce::jmap(ccNormalized, 0.01f, 5.0f);
+    }
+    if (paramId.endsWith("chorusRate"))
+    {
+        return juce::jmap(ccNormalized, 0.1f, 10.0f);
+    }
+    if (paramId.endsWith("limiterThreshold"))
+    {
+        return juce::jmap(ccNormalized, -40.0f, 0.0f);
+    }
+    if (paramId.endsWith("limiterRelease"))
+    {
+        return juce::jmap(ccNormalized, 1.0f, 500.0f);
+    }
+    return ccNormalized;
 }
 
 juce::AudioProcessor* JUCE_CALLTYPE createPluginFilter()

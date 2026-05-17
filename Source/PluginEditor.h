@@ -318,9 +318,136 @@ private:
   GranularLayer &layer;
 };
 
+class MappedSlider : public juce::Slider
+{
+public:
+    MappedSlider() : audioProcessor(nullptr) {}
+
+    void init(const juce::String& parameterId, GranularSynthAudioProcessor& processor)
+    {
+        paramId = parameterId;
+        audioProcessor = &processor;
+    }
+
+    void mouseDown(const juce::MouseEvent& e) override
+    {
+        if (audioProcessor != nullptr && e.mods.isRightButtonDown())
+        {
+            showPopupMenu();
+        }
+        else
+        {
+            juce::Slider::mouseDown(e);
+        }
+    }
+
+    void paint(juce::Graphics& g) override
+    {
+        juce::Slider::paint(g);
+
+        if (audioProcessor == nullptr)
+            return;
+
+        bool isLearning = (audioProcessor->getLearningParamID() == paramId);
+        bool hasMapping = audioProcessor->hasMidiMapping(paramId);
+
+        if (isLearning)
+        {
+            auto bounds = getLocalBounds().toFloat();
+            g.setColour(juce::Colour(220, 80, 80).withAlpha(0.2f));
+            g.fillRoundedRectangle(bounds, 6.0f);
+            
+            g.setColour(juce::Colour(220, 80, 80).withAlpha(0.7f));
+            g.drawRoundedRectangle(bounds, 6.0f, 1.5f);
+            
+            g.setFont(juce::FontOptions(10.0f).withStyle("Bold"));
+            g.setColour(juce::Colours::white);
+            g.drawText("LEARN", bounds, juce::Justification::centred);
+        }
+        else if (hasMapping)
+        {
+            auto bounds = getLocalBounds();
+            g.setColour(juce::Colour(9, 136, 131)); // Glowing Teal mapping dot
+            g.fillEllipse((float)(bounds.getWidth() - 9), 3.0f, 5.0f, 5.0f);
+            g.setColour(juce::Colours::white.withAlpha(0.6f));
+            g.drawEllipse((float)(bounds.getWidth() - 9), 3.0f, 5.0f, 5.0f, 0.5f);
+        }
+    }
+
+private:
+    void showPopupMenu()
+    {
+        if (audioProcessor == nullptr)
+            return;
+
+        juce::PopupMenu menu;
+        
+        bool isLearning = (audioProcessor->getLearningParamID() == paramId);
+        bool hasMapping = audioProcessor->hasMidiMapping(paramId);
+        int currentCC = audioProcessor->getMidiMappingCC(paramId);
+
+        if (isLearning)
+        {
+            menu.addItem(1, "Learning MIDI CC... (Move controller now)", false);
+        }
+        else
+        {
+            if (hasMapping)
+                menu.addItem(1, "MIDI Learned: CC " + juce::String(currentCC));
+            else
+                menu.addItem(1, "MIDI Learn");
+        }
+
+        menu.addItem(2, "Remove MIDI Mapping", hasMapping);
+
+        menu.showMenuAsync(juce::PopupMenu::Options(), [this](int result)
+        {
+            if (audioProcessor == nullptr)
+                return;
+
+            if (result == 1)
+            {
+                audioProcessor->setLearningParamID(paramId);
+            }
+            else if (result == 2)
+            {
+                audioProcessor->removeMidiMapping(paramId);
+            }
+        });
+    }
+
+    juce::String paramId;
+    GranularSynthAudioProcessor* audioProcessor;
+};
+
 class LayerUI : public juce::Component, public juce::Timer, public juce::FileDragAndDropTarget {
 public:
-  LayerUI(GranularLayer &layer) : layer(layer), viewer(layer) {
+  LayerUI(GranularSynthAudioProcessor &p, int layerIdx) 
+      : audioProcessor(p), layerIndex(layerIdx), layer(p.getLayer(layerIdx)), viewer(p.getLayer(layerIdx)) {
+      
+    posSlider.init("layer/" + juce::String(layerIndex) + "/position", audioProcessor);
+    sizeSlider.init("layer/" + juce::String(layerIndex) + "/size", audioProcessor);
+    densSlider.init("layer/" + juce::String(layerIndex) + "/density", audioProcessor);
+    pitchSlider.init("layer/" + juce::String(layerIndex) + "/pitch", audioProcessor);
+    
+    posRandSlider.init("layer/" + juce::String(layerIndex) + "/posRandomness", audioProcessor);
+    pitchRandSlider.init("layer/" + juce::String(layerIndex) + "/pitchRandomness", audioProcessor);
+    sizeRandSlider.init("layer/" + juce::String(layerIndex) + "/sizeRandomness", audioProcessor);
+    
+    panSlider.init("layer/" + juce::String(layerIndex) + "/pan", audioProcessor);
+    spreadSlider.init("layer/" + juce::String(layerIndex) + "/spread", audioProcessor);
+    
+    scanSpeedSlider.init("layer/" + juce::String(layerIndex) + "/scanSpeed", audioProcessor);
+    revProbSlider.init("layer/" + juce::String(layerIndex) + "/reverseProbability", audioProcessor);
+    
+    cutoffSlider.init("layer/" + juce::String(layerIndex) + "/filterCutoff", audioProcessor);
+    resSlider.init("layer/" + juce::String(layerIndex) + "/filterResonance", audioProcessor);
+    
+    atkSlider.init("layer/" + juce::String(layerIndex) + "/attack", audioProcessor);
+    decSlider.init("layer/" + juce::String(layerIndex) + "/decay", audioProcessor);
+    susSlider.init("layer/" + juce::String(layerIndex) + "/sustain", audioProcessor);
+    relSlider.init("layer/" + juce::String(layerIndex) + "/release", audioProcessor);
+
     addAndMakeVisible(viewer);
 
     addAndMakeVisible(loadButton);
@@ -653,19 +780,21 @@ private:
     label->attachToComponent(&s, false);
   }
 
+  GranularSynthAudioProcessor &audioProcessor;
+  int layerIndex;
   GranularLayer &layer;
   WaveformViewer viewer;
   juce::TextButton loadButton;
   juce::TextButton clearButton;
   juce::Label sampleNameLabel;
   juce::Label granLabel, filterLabel, envLabel;
-  juce::Slider posSlider, sizeSlider, densSlider, pitchSlider;
-  juce::Slider posRandSlider, pitchRandSlider, sizeRandSlider;
-  juce::Slider panSlider, spreadSlider;
-  juce::Slider scanSpeedSlider, revProbSlider;
+  MappedSlider posSlider, sizeSlider, densSlider, pitchSlider;
+  MappedSlider posRandSlider, pitchRandSlider, sizeRandSlider;
+  MappedSlider panSlider, spreadSlider;
+  MappedSlider scanSpeedSlider, revProbSlider;
   juce::ComboBox windowShapeCombo;
-  juce::Slider atkSlider, decSlider, susSlider, relSlider;
-  juce::Slider cutoffSlider, resSlider;
+  MappedSlider atkSlider, decSlider, susSlider, relSlider;
+  MappedSlider cutoffSlider, resSlider;
   juce::OwnedArray<juce::Label> labels;
   std::unique_ptr<juce::FileChooser> chooser;
   bool isDragging = false;
@@ -674,6 +803,16 @@ private:
 class EffectsUI : public juce::Component, public juce::Timer {
 public:
   EffectsUI(GranularSynthAudioProcessor &p) : audioProcessor(p) {
+    reverbSizeSlider.init("global/reverbSize", audioProcessor);
+    reverbWetSlider.init("global/reverbWet", audioProcessor);
+    chorusRateSlider.init("global/chorusRate", audioProcessor);
+    chorusDepthSlider.init("global/chorusDepth", audioProcessor);
+    chorusMixSlider.init("global/chorusMix", audioProcessor);
+    filterCutoffSlider.init("global/filterCutoff", audioProcessor);
+    filterResSlider.init("global/filterResonance", audioProcessor);
+    limiterThresholdSlider.init("global/limiterThreshold", audioProcessor);
+    limiterReleaseSlider.init("global/limiterRelease", audioProcessor);
+
     // 1. Reverb Bypass & Sliders
     addAndMakeVisible(reverbBypassBtn);
     reverbBypassBtn.setClickingTogglesState(true);
@@ -878,10 +1017,10 @@ private:
 
   GranularSynthAudioProcessor &audioProcessor;
   juce::TextButton reverbBypassBtn {"ON"}, chorusBypassBtn {"ON"}, filterBypassBtn {"ON"}, limiterBypassBtn {"ON"};
-  juce::Slider reverbSizeSlider, reverbWetSlider;
-  juce::Slider chorusRateSlider, chorusDepthSlider, chorusMixSlider;
-  juce::Slider filterCutoffSlider, filterResSlider;
-  juce::Slider limiterThresholdSlider, limiterReleaseSlider;
+  MappedSlider reverbSizeSlider, reverbWetSlider;
+  MappedSlider chorusRateSlider, chorusDepthSlider, chorusMixSlider;
+  MappedSlider filterCutoffSlider, filterResSlider;
+  MappedSlider limiterThresholdSlider, limiterReleaseSlider;
   juce::OwnedArray<juce::Label> labels;
 };
 
@@ -890,7 +1029,8 @@ public:
   MixerUI(GranularSynthAudioProcessor &p) : audioProcessor(p) {
     for (int i = 0; i < 4; ++i) {
       // 1. Volume Sliders
-      auto *s = sliders.add(new juce::Slider());
+      auto *s = sliders.add(new MappedSlider());
+      s->init("layer/" + juce::String(i) + "/volume", audioProcessor);
       addAndMakeVisible(s);
       s->setSliderStyle(juce::Slider::LinearVertical);
       s->setRange(0.0f, 1.0f);
@@ -901,7 +1041,8 @@ public:
       };
 
       // 2. Pan Sliders
-      auto *ps = panSliders.add(new juce::Slider());
+      auto *ps = panSliders.add(new MappedSlider());
+      ps->init("layer/" + juce::String(i) + "/pan", audioProcessor);
       addAndMakeVisible(ps);
       ps->setSliderStyle(juce::Slider::RotaryHorizontalVerticalDrag);
       ps->setRange(-1.0f, 1.0f);
@@ -1079,8 +1220,8 @@ public:
 
 private:
   GranularSynthAudioProcessor &audioProcessor;
-  juce::OwnedArray<juce::Slider> sliders;
-  juce::OwnedArray<juce::Slider> panSliders;
+  juce::OwnedArray<MappedSlider> sliders;
+  juce::OwnedArray<MappedSlider> panSliders;
   juce::OwnedArray<juce::Label> labels;
   juce::OwnedArray<juce::Label> panLabels;
   juce::OwnedArray<juce::TextButton> muteButtons;
