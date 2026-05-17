@@ -56,9 +56,12 @@ jobs:
           VST_PATH=$(find build/LayerEngine_artefacts -name "LayerEngine.vst3" -type d | head -n 1)
           # Find Standalone
           STANDALONE_PATH=$(find build/LayerEngine_artefacts -name "LayerEngine" -type f -executable | head -n 1)
+          # Find AU (macOS only)
+          AU_PATH=$(find build/LayerEngine_artefacts -name "LayerEngine.component" -type d | head -n 1)
           
           if [ -d "$VST_PATH" ]; then cp -r "$VST_PATH" artifacts/; fi
           if [ -f "$STANDALONE_PATH" ]; then cp "$STANDALONE_PATH" artifacts/; fi
+          if [ -d "$AU_PATH" ]; then cp -r "$AU_PATH" artifacts/; fi
           
           cd artifacts && zip -r ../LayerEngine-${{ matrix.platform }}.zip .
 
