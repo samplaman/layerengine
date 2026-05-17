@@ -1,6 +1,7 @@
 #pragma once
 
 #include <JuceHeader.h>
+#include <atomic>
 
 enum class WindowShape
 {
@@ -62,6 +63,8 @@ public:
     GranularParams& getParams() { return params; }
     bool hasSample() const { return sampleBuffer.getNumSamples() > 0; }
     const juce::AudioSampleBuffer& getSampleBuffer() const { return sampleBuffer; }
+    juce::String getCurrentSamplePath() const { return currentSamplePath; }
+    float getCurrentLevel() const { return currentLevel.load(); }
 
     struct Grain {
         double startSample;
@@ -83,6 +86,8 @@ private:
     juce::CriticalSection lock;
     
     GranularParams params;
+    juce::String currentSamplePath;
+    std::atomic<float> currentLevel { 0.0f };
     
     double currentSampleRate = 44100.0;
     std::vector<Grain> grains;

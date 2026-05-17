@@ -27,8 +27,8 @@ public:
     const juce::String getProgramName (int index) override { return {}; }
     void changeProgramName (int index, const juce::String& newName) override {}
 
-    void getStateInformation (juce::MemoryBlock& destData) override {}
-    void setStateInformation (const void* data, int sizeInBytes) override {}
+    void getStateInformation (juce::MemoryBlock& destData) override;
+    void setStateInformation (const void* data, int sizeInBytes) override;
 
     GranularLayer& getLayer(int index) { return layers[index]; }
     juce::MidiKeyboardState& getKeyboardState() { return keyboardState; }
@@ -47,6 +47,11 @@ public:
         
         float limiterThreshold = 0.0f; // dB
         float limiterRelease = 100.0f; // ms
+        
+        bool reverbBypass = false;
+        bool chorusBypass = false;
+        bool filterBypass = false;
+        bool limiterBypass = false;
     };
     FXParams& getFXParams() { return fxParams; }
 

@@ -25,6 +25,7 @@ void GranularLayer::loadSample(const juce::File& file)
             
         adsr.reset();
         activeNoteNumbers.clear();
+        currentSamplePath = file.getFullPathName();
     }
 }
 
@@ -38,6 +39,7 @@ void GranularLayer::clearSample()
         
     adsr.reset();
     activeNoteNumbers.clear();
+    currentSamplePath = {};
 }
 
 void GranularLayer::prepareToPlay(double sampleRate, int samplesPerBlock)
@@ -104,19 +106,31 @@ static float getEnvelopeValue(double phase, WindowShape shape)
 
 static float getInterpolatedSample(const juce::AudioSampleBuffer& buffer, int channel, double sampleIdx)
 {
+    int numSamples = buffer.getNumSamples();
+    if (numSamples == 0) return 0.0f;
+    
     int idx1 = (int)sampleIdx;
+    int idx0 = idx1 - 1;
     int idx2 = idx1 + 1;
+    int idx3 = idx1 + 2;
     
     float frac = (float)(sampleIdx - idx1);
     
-    int numSamples = buffer.getNumSamples();
-    if (idx1 >= numSamples) return 0.0f;
-    if (idx2 >= numSamples) return buffer.getSample(channel, idx1);
+    if (idx1 < 0 || idx1 >= numSamples) return 0.0f;
     
+    // Boundary clamping for 4-point Hermite interpolation
+    float s0 = (idx0 >= 0) ? buffer.getSample(channel, idx0) : buffer.getSample(channel, idx1);
     float s1 = buffer.getSample(channel, idx1);
-    float s2 = buffer.getSample(channel, idx2);
+    float s2 = (idx2 < numSamples) ? buffer.getSample(channel, idx2) : s1;
+    float s3 = (idx3 < numSamples) ? buffer.getSample(channel, idx3) : s2;
     
-    return s1 + frac * (s2 - s1);
+    // Cubic Hermite spline coefficients
+    float c0 = s1;
+    float c1 = 0.5f * (s2 - s0);
+    float c2 = s0 - 2.5f * s1 + 2.0f * s2 - 0.5f * s3;
+    float c3 = 0.5f * (s3 - s0) + 1.5f * (s1 - s2);
+    
+    return ((c3 * frac + c2) * frac + c1) * frac + c0;
 }
 
 void GranularLayer::spawnGrain()
@@ -261,6 +275,20 @@ void GranularLayer::processBlock(juce::AudioBuffer<float>& buffer, juce::MidiBuf
     juce::dsp::AudioBlock<float> block(layerBuffer);
     juce::dsp::ProcessContextReplacing<float> context(block);
     filter.process(context);
+
+    // Calculate peak level for mixer meters
+    float maxSample = 0.0f;
+    for (int ch = 0; ch < layerBuffer.getNumChannels(); ++ch)
+    {
+        auto* readPtr = layerBuffer.getReadPointer(ch);
+        for (int s = 0; s < numSamples; ++s)
+        {
+            float absVal = std::abs(readPtr[s]);
+            if (absVal > maxSample)
+                maxSample = absVal;
+        }
+    }
+    currentLevel.store(maxSample);
 
     // Add to main buffer
     for (int ch = 0; ch < buffer.getNumChannels(); ++ch)

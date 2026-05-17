@@ -318,7 +318,7 @@ private:
   GranularLayer &layer;
 };
 
-class LayerUI : public juce::Component, public juce::Timer {
+class LayerUI : public juce::Component, public juce::Timer, public juce::FileDragAndDropTarget {
 public:
   LayerUI(GranularLayer &layer) : layer(layer), viewer(layer) {
     addAndMakeVisible(viewer);
@@ -461,14 +461,99 @@ public:
       this->layer.getParams().release = (float)relSlider.getValue();
     };
 
-    startTimerHz(60);
+    startTimerHz(30);
+  }
+
+  // File drag & drop support
+  bool isInterestedInFileDrag(const juce::StringArray& files) override {
+    for (auto& file : files) {
+      if (file.endsWithIgnoreCase(".wav") || file.endsWithIgnoreCase(".aif") ||
+          file.endsWithIgnoreCase(".aiff") || file.endsWithIgnoreCase(".mp3")) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  void fileDragEnter(const juce::StringArray& files, int x, int y) override {
+    isDragging = true;
+    repaint();
+  }
+
+  void fileDragExit(const juce::StringArray& files) override {
+    isDragging = false;
+    repaint();
+  }
+
+  void filesDropped(const juce::StringArray& files, int x, int y) override {
+    isDragging = false;
+    auto file = juce::File(files[0]);
+    if (file.existsAsFile()) {
+      layer.loadSample(file);
+      sampleNameLabel.setText(file.getFileName().toUpperCase(), juce::dontSendNotification);
+      viewer.repaint();
+    }
+    repaint();
   }
 
   void timerCallback() override {
     viewer.repaint();
+    
+    // Dynamic synchronization from processor to UI sliders when not manually dragging
     if (!posSlider.isMouseButtonDown())
-      posSlider.setValue(layer.getParams().position,
-                         juce::dontSendNotification);
+      posSlider.setValue(layer.getParams().position, juce::dontSendNotification);
+    if (!sizeSlider.isMouseButtonDown())
+      sizeSlider.setValue(layer.getParams().size, juce::dontSendNotification);
+    if (!densSlider.isMouseButtonDown())
+      densSlider.setValue(layer.getParams().density, juce::dontSendNotification);
+    if (!pitchSlider.isMouseButtonDown())
+      pitchSlider.setValue(layer.getParams().pitch, juce::dontSendNotification);
+      
+    if (!posRandSlider.isMouseButtonDown())
+      posRandSlider.setValue(layer.getParams().posRandomness, juce::dontSendNotification);
+    if (!pitchRandSlider.isMouseButtonDown())
+      pitchRandSlider.setValue(layer.getParams().pitchRandomness, juce::dontSendNotification);
+    if (!sizeRandSlider.isMouseButtonDown())
+      sizeRandSlider.setValue(layer.getParams().sizeRandomness, juce::dontSendNotification);
+      
+    if (!panSlider.isMouseButtonDown())
+      panSlider.setValue(layer.getParams().pan, juce::dontSendNotification);
+    if (!spreadSlider.isMouseButtonDown())
+      spreadSlider.setValue(layer.getParams().spread, juce::dontSendNotification);
+      
+    if (!scanSpeedSlider.isMouseButtonDown())
+      scanSpeedSlider.setValue(layer.getParams().scanSpeed, juce::dontSendNotification);
+    if (!revProbSlider.isMouseButtonDown())
+      revProbSlider.setValue(layer.getParams().reverseProbability, juce::dontSendNotification);
+      
+    if (!cutoffSlider.isMouseButtonDown())
+      cutoffSlider.setValue(layer.getParams().filterCutoff, juce::dontSendNotification);
+    if (!resSlider.isMouseButtonDown())
+      resSlider.setValue(layer.getParams().filterResonance, juce::dontSendNotification);
+      
+    if (!atkSlider.isMouseButtonDown())
+      atkSlider.setValue(layer.getParams().attack, juce::dontSendNotification);
+    if (!decSlider.isMouseButtonDown())
+      decSlider.setValue(layer.getParams().decay, juce::dontSendNotification);
+    if (!susSlider.isMouseButtonDown())
+      susSlider.setValue(layer.getParams().sustain, juce::dontSendNotification);
+    if (!relSlider.isMouseButtonDown())
+      relSlider.setValue(layer.getParams().release, juce::dontSendNotification);
+      
+    int expectedShapeId = (int)layer.getParams().windowShape + 1;
+    if (windowShapeCombo.getSelectedId() != expectedShapeId)
+      windowShapeCombo.setSelectedId(expectedShapeId, juce::dontSendNotification);
+
+    juce::String currentPath = layer.getCurrentSamplePath();
+    if (currentPath.isEmpty()) {
+      if (sampleNameLabel.getText() != "READY FOR SAMPLE")
+        sampleNameLabel.setText("READY FOR SAMPLE", juce::dontSendNotification);
+    } else {
+      juce::File f(currentPath);
+      juce::String displayName = f.getFileName().toUpperCase();
+      if (sampleNameLabel.getText() != displayName)
+        sampleNameLabel.setText(displayName, juce::dontSendNotification);
+    }
   }
 
   void paint(juce::Graphics &g) override {
@@ -480,8 +565,15 @@ public:
     g.setGradientFill(bgGrad);
     g.fillRoundedRectangle(area, 10.0f);
 
-    g.setColour(juce::Colours::white);
-    g.drawRoundedRectangle(area, 10.0f, 1.5f);
+    if (isDragging) {
+      g.setColour(juce::Colour(9, 136, 131).withAlpha(0.8f)); // Active glass drag outline
+      g.drawRoundedRectangle(area, 10.0f, 3.0f);
+      g.setColour(juce::Colour(9, 136, 131).withAlpha(0.15f));
+      g.fillRoundedRectangle(area, 10.0f);
+    } else {
+      g.setColour(juce::Colours::white);
+      g.drawRoundedRectangle(area, 10.0f, 1.5f);
+    }
   }
 
   void resized() override {
@@ -576,12 +668,24 @@ private:
   juce::Slider cutoffSlider, resSlider;
   juce::OwnedArray<juce::Label> labels;
   std::unique_ptr<juce::FileChooser> chooser;
+  bool isDragging = false;
 };
 
-class EffectsUI : public juce::Component {
+class EffectsUI : public juce::Component, public juce::Timer {
 public:
   EffectsUI(GranularSynthAudioProcessor &p) : audioProcessor(p) {
-    // Reverb
+    // 1. Reverb Bypass & Sliders
+    addAndMakeVisible(reverbBypassBtn);
+    reverbBypassBtn.setClickingTogglesState(true);
+    reverbBypassBtn.setToggleState(!audioProcessor.getFXParams().reverbBypass, juce::dontSendNotification);
+    reverbBypassBtn.setColour(juce::TextButton::buttonColourId, juce::Colour(45, 52, 54).withAlpha(0.4f));
+    reverbBypassBtn.setColour(juce::TextButton::buttonOnColourId, juce::Colour(9, 136, 131).withAlpha(0.85f)); // Soft glowing teal
+    reverbBypassBtn.setColour(juce::TextButton::textColourOffId, juce::Colour(120, 120, 120));
+    reverbBypassBtn.setColour(juce::TextButton::textColourOnId, juce::Colours::white);
+    reverbBypassBtn.onClick = [this] {
+      audioProcessor.getFXParams().reverbBypass = !reverbBypassBtn.getToggleState();
+    };
+
     setupSlider(reverbSizeSlider, "REV SIZE", audioProcessor.getReverbParams().roomSize);
     reverbSizeSlider.onValueChange = [this] {
       audioProcessor.getReverbParams().roomSize = (float)reverbSizeSlider.getValue();
@@ -592,7 +696,18 @@ public:
       audioProcessor.getReverbParams().wetLevel = (float)reverbWetSlider.getValue();
     };
 
-    // Chorus
+    // 2. Chorus Bypass & Sliders
+    addAndMakeVisible(chorusBypassBtn);
+    chorusBypassBtn.setClickingTogglesState(true);
+    chorusBypassBtn.setToggleState(!audioProcessor.getFXParams().chorusBypass, juce::dontSendNotification);
+    chorusBypassBtn.setColour(juce::TextButton::buttonColourId, juce::Colour(45, 52, 54).withAlpha(0.4f));
+    chorusBypassBtn.setColour(juce::TextButton::buttonOnColourId, juce::Colour(9, 136, 131).withAlpha(0.85f));
+    chorusBypassBtn.setColour(juce::TextButton::textColourOffId, juce::Colour(120, 120, 120));
+    chorusBypassBtn.setColour(juce::TextButton::textColourOnId, juce::Colours::white);
+    chorusBypassBtn.onClick = [this] {
+      audioProcessor.getFXParams().chorusBypass = !chorusBypassBtn.getToggleState();
+    };
+
     setupSlider(chorusRateSlider, "CHO RATE", audioProcessor.getFXParams().chorusRate, 0.1f, 10.0f);
     chorusRateSlider.onValueChange = [this] {
       audioProcessor.getFXParams().chorusRate = (float)chorusRateSlider.getValue();
@@ -608,7 +723,18 @@ public:
       audioProcessor.getFXParams().chorusMix = (float)chorusMixSlider.getValue();
     };
 
-    // Master Filter
+    // 3. Filter Bypass & Sliders
+    addAndMakeVisible(filterBypassBtn);
+    filterBypassBtn.setClickingTogglesState(true);
+    filterBypassBtn.setToggleState(!audioProcessor.getFXParams().filterBypass, juce::dontSendNotification);
+    filterBypassBtn.setColour(juce::TextButton::buttonColourId, juce::Colour(45, 52, 54).withAlpha(0.4f));
+    filterBypassBtn.setColour(juce::TextButton::buttonOnColourId, juce::Colour(9, 136, 131).withAlpha(0.85f));
+    filterBypassBtn.setColour(juce::TextButton::textColourOffId, juce::Colour(120, 120, 120));
+    filterBypassBtn.setColour(juce::TextButton::textColourOnId, juce::Colours::white);
+    filterBypassBtn.onClick = [this] {
+      audioProcessor.getFXParams().filterBypass = !filterBypassBtn.getToggleState();
+    };
+
     setupSlider(filterCutoffSlider, "MASTER HP/LP", audioProcessor.getFXParams().filterCutoff, 20.0f, 20000.0f);
     filterCutoffSlider.setSkewFactorFromMidPoint(1000.0f);
     filterCutoffSlider.onValueChange = [this] {
@@ -620,7 +746,18 @@ public:
       audioProcessor.getFXParams().filterResonance = (float)filterResSlider.getValue();
     };
 
-    // Limiter
+    // 4. Limiter Bypass & Sliders
+    addAndMakeVisible(limiterBypassBtn);
+    limiterBypassBtn.setClickingTogglesState(true);
+    limiterBypassBtn.setToggleState(!audioProcessor.getFXParams().limiterBypass, juce::dontSendNotification);
+    limiterBypassBtn.setColour(juce::TextButton::buttonColourId, juce::Colour(45, 52, 54).withAlpha(0.4f));
+    limiterBypassBtn.setColour(juce::TextButton::buttonOnColourId, juce::Colour(9, 136, 131).withAlpha(0.85f));
+    limiterBypassBtn.setColour(juce::TextButton::textColourOffId, juce::Colour(120, 120, 120));
+    limiterBypassBtn.setColour(juce::TextButton::textColourOnId, juce::Colours::white);
+    limiterBypassBtn.onClick = [this] {
+      audioProcessor.getFXParams().limiterBypass = !limiterBypassBtn.getToggleState();
+    };
+
     setupSlider(limiterThresholdSlider, "LMT THRESH", audioProcessor.getFXParams().limiterThreshold, -40.0f, 0.0f);
     limiterThresholdSlider.onValueChange = [this] {
       audioProcessor.getFXParams().limiterThreshold = (float)limiterThresholdSlider.getValue();
@@ -630,6 +767,49 @@ public:
     limiterReleaseSlider.onValueChange = [this] {
       audioProcessor.getFXParams().limiterRelease = (float)limiterReleaseSlider.getValue();
     };
+    
+    startTimerHz(30);
+  }
+
+  void timerCallback() override {
+    if (!reverbSizeSlider.isMouseButtonDown())
+      reverbSizeSlider.setValue(audioProcessor.getReverbParams().roomSize, juce::dontSendNotification);
+    if (!reverbWetSlider.isMouseButtonDown())
+      reverbWetSlider.setValue(audioProcessor.getReverbParams().wetLevel, juce::dontSendNotification);
+      
+    if (!chorusRateSlider.isMouseButtonDown())
+      chorusRateSlider.setValue(audioProcessor.getFXParams().chorusRate, juce::dontSendNotification);
+    if (!chorusDepthSlider.isMouseButtonDown())
+      chorusDepthSlider.setValue(audioProcessor.getFXParams().chorusDepth, juce::dontSendNotification);
+    if (!chorusMixSlider.isMouseButtonDown())
+      chorusMixSlider.setValue(audioProcessor.getFXParams().chorusMix, juce::dontSendNotification);
+      
+    if (!filterCutoffSlider.isMouseButtonDown())
+      filterCutoffSlider.setValue(audioProcessor.getFXParams().filterCutoff, juce::dontSendNotification);
+    if (!filterResSlider.isMouseButtonDown())
+      filterResSlider.setValue(audioProcessor.getFXParams().filterResonance, juce::dontSendNotification);
+      
+    if (!limiterThresholdSlider.isMouseButtonDown())
+      limiterThresholdSlider.setValue(audioProcessor.getFXParams().limiterThreshold, juce::dontSendNotification);
+    if (!limiterReleaseSlider.isMouseButtonDown())
+      limiterReleaseSlider.setValue(audioProcessor.getFXParams().limiterRelease, juce::dontSendNotification);
+
+    // Sync bypass button states
+    bool expectedReverbToggle = !audioProcessor.getFXParams().reverbBypass;
+    if (reverbBypassBtn.getToggleState() != expectedReverbToggle)
+      reverbBypassBtn.setToggleState(expectedReverbToggle, juce::dontSendNotification);
+
+    bool expectedChorusToggle = !audioProcessor.getFXParams().chorusBypass;
+    if (chorusBypassBtn.getToggleState() != expectedChorusToggle)
+      chorusBypassBtn.setToggleState(expectedChorusToggle, juce::dontSendNotification);
+
+    bool expectedFilterToggle = !audioProcessor.getFXParams().filterBypass;
+    if (filterBypassBtn.getToggleState() != expectedFilterToggle)
+      filterBypassBtn.setToggleState(expectedFilterToggle, juce::dontSendNotification);
+
+    bool expectedLimiterToggle = !audioProcessor.getFXParams().limiterBypass;
+    if (limiterBypassBtn.getToggleState() != expectedLimiterToggle)
+      limiterBypassBtn.setToggleState(expectedLimiterToggle, juce::dontSendNotification);
   }
 
   void paint(juce::Graphics &g) override {
@@ -648,24 +828,32 @@ public:
   void resized() override {
     auto area = getLocalBounds().reduced(40, 20);
 
-    // Four rows
+    // Four rows, each row has a bypass button on the left
     auto reverbArea = area.removeFromTop(area.getHeight() / 4);
+    auto reverbBtnArea = reverbArea.removeFromLeft(70).reduced(0, 20);
+    reverbBypassBtn.setBounds(reverbBtnArea);
     int revW = reverbArea.getWidth() / 2;
     reverbSizeSlider.setBounds(reverbArea.removeFromLeft(revW).reduced(20, 10));
     reverbWetSlider.setBounds(reverbArea.removeFromLeft(revW).reduced(20, 10));
 
     auto chorusArea = area.removeFromTop(area.getHeight() / 3);
+    auto chorusBtnArea = chorusArea.removeFromLeft(70).reduced(0, 20);
+    chorusBypassBtn.setBounds(chorusBtnArea);
     int choW = chorusArea.getWidth() / 3;
     chorusRateSlider.setBounds(chorusArea.removeFromLeft(choW).reduced(20, 10));
     chorusDepthSlider.setBounds(chorusArea.removeFromLeft(choW).reduced(20, 10));
     chorusMixSlider.setBounds(chorusArea.removeFromLeft(choW).reduced(20, 10));
 
     auto filterArea = area.removeFromTop(area.getHeight() / 2);
+    auto filterBtnArea = filterArea.removeFromLeft(70).reduced(0, 20);
+    filterBypassBtn.setBounds(filterBtnArea);
     int filW = filterArea.getWidth() / 2;
     filterCutoffSlider.setBounds(filterArea.removeFromLeft(filW).reduced(20, 10));
     filterResSlider.setBounds(filterArea.removeFromLeft(filW).reduced(20, 10));
 
     auto limiterArea = area;
+    auto limiterBtnArea = limiterArea.removeFromLeft(70).reduced(0, 20);
+    limiterBypassBtn.setBounds(limiterBtnArea);
     int limW = limiterArea.getWidth() / 2;
     limiterThresholdSlider.setBounds(limiterArea.removeFromLeft(limW).reduced(20, 10));
     limiterReleaseSlider.setBounds(limiterArea.removeFromLeft(limW).reduced(20, 10));
@@ -689,6 +877,7 @@ private:
   }
 
   GranularSynthAudioProcessor &audioProcessor;
+  juce::TextButton reverbBypassBtn {"ON"}, chorusBypassBtn {"ON"}, filterBypassBtn {"ON"}, limiterBypassBtn {"ON"};
   juce::Slider reverbSizeSlider, reverbWetSlider;
   juce::Slider chorusRateSlider, chorusDepthSlider, chorusMixSlider;
   juce::Slider filterCutoffSlider, filterResSlider;
@@ -696,10 +885,11 @@ private:
   juce::OwnedArray<juce::Label> labels;
 };
 
-class MixerUI : public juce::Component {
+class MixerUI : public juce::Component, public juce::Timer {
 public:
   MixerUI(GranularSynthAudioProcessor &p) : audioProcessor(p) {
     for (int i = 0; i < 4; ++i) {
+      // 1. Volume Sliders
       auto *s = sliders.add(new juce::Slider());
       addAndMakeVisible(s);
       s->setSliderStyle(juce::Slider::LinearVertical);
@@ -710,14 +900,33 @@ public:
         audioProcessor.getLayer(i).getParams().volume = (float)s->getValue();
       };
 
+      // 2. Pan Sliders
+      auto *ps = panSliders.add(new juce::Slider());
+      addAndMakeVisible(ps);
+      ps->setSliderStyle(juce::Slider::RotaryHorizontalVerticalDrag);
+      ps->setRange(-1.0f, 1.0f);
+      ps->setValue(audioProcessor.getLayer(i).getParams().pan);
+      ps->setTextBoxStyle(juce::Slider::NoTextBox, false, 0, 0);
+      ps->onValueChange = [this, i, ps] {
+        audioProcessor.getLayer(i).getParams().pan = (float)ps->getValue();
+      };
+
+      // 3. Layer Name Labels
       auto *l = labels.add(new juce::Label("L" + juce::String(i + 1),
                                            "LAYER " + juce::String(i + 1)));
       addAndMakeVisible(l);
       l->setFont(juce::FontOptions(14.0f).withStyle("Bold"));
       l->setColour(juce::Label::textColourId, juce::Colour(0xff2d3436));
       l->setJustificationType(juce::Justification::centred);
-      l->attachToComponent(s, false);
 
+      // 4. Pan Labels
+      auto *pl = panLabels.add(new juce::Label("PL" + juce::String(i + 1), "PAN"));
+      addAndMakeVisible(pl);
+      pl->setFont(juce::FontOptions(10.0f).withStyle("Bold"));
+      pl->setColour(juce::Label::textColourId, juce::Colour(0xff2d3436).withAlpha(0.6f));
+      pl->setJustificationType(juce::Justification::centred);
+
+      // 5. Mute Buttons
       auto *m = muteButtons.add(new juce::TextButton("M"));
       addAndMakeVisible(m);
       m->setClickingTogglesState(true);
@@ -730,6 +939,7 @@ public:
         audioProcessor.getLayer(i).getParams().isMuted = m->getToggleState();
       };
 
+      // 6. Solo Buttons
       auto *sol = soloButtons.add(new juce::TextButton("S"));
       addAndMakeVisible(sol);
       sol->setClickingTogglesState(true);
@@ -742,6 +952,26 @@ public:
         audioProcessor.getLayer(i).getParams().isSoloed = sol->getToggleState();
       };
     }
+    
+    startTimerHz(30);
+  }
+
+  void timerCallback() override {
+    for (int i = 0; i < 4; ++i) {
+      if (i < sliders.size() && sliders[i] != nullptr && !sliders[i]->isMouseButtonDown()) {
+        sliders[i]->setValue(audioProcessor.getLayer(i).getParams().volume, juce::dontSendNotification);
+      }
+      if (i < panSliders.size() && panSliders[i] != nullptr && !panSliders[i]->isMouseButtonDown()) {
+        panSliders[i]->setValue(audioProcessor.getLayer(i).getParams().pan, juce::dontSendNotification);
+      }
+      if (i < muteButtons.size() && muteButtons[i] != nullptr) {
+        muteButtons[i]->setToggleState(audioProcessor.getLayer(i).getParams().isMuted, juce::dontSendNotification);
+      }
+      if (i < soloButtons.size() && soloButtons[i] != nullptr) {
+        soloButtons[i]->setToggleState(audioProcessor.getLayer(i).getParams().isSoloed, juce::dontSendNotification);
+      }
+    }
+    repaint();
   }
 
   void paint(juce::Graphics &g) override {
@@ -755,6 +985,63 @@ public:
 
     g.setColour(juce::Colours::white);
     g.drawRoundedRectangle(area, 10.0f, 1.5f);
+
+    // Draw active level meters next to each layer channel strip
+    auto mixerArea = getLocalBounds().reduced(50);
+    int layerW = mixerArea.getWidth() / 4;
+
+    for (int i = 0; i < 4; ++i) {
+      auto layerArea = mixerArea.removeFromLeft(layerW);
+      
+      // Level Meter bounds (moved down to align precisely with volume faders)
+      int meterW = 6;
+      int meterX = layerArea.getRight() - 25; 
+      
+      // Calculate vertical volume fader area manually to align meter perfectly
+      auto faderArea = layerArea;
+      faderArea.removeFromBottom(35); // Remove mute/solo buttons and gap
+      faderArea.removeFromTop(80);    // Remove title label, pan knob, and pan label
+      
+      int meterY = faderArea.getY() + 10;
+      int meterH = faderArea.getHeight() - 20;
+
+      // Draw meter track background
+      g.setColour(juce::Colours::black.withAlpha(0.12f));
+      g.fillRoundedRectangle((float)meterX, (float)meterY, (float)meterW, (float)meterH, 3.0f);
+
+      // Track outline
+      g.setColour(juce::Colours::white.withAlpha(0.2f));
+      g.drawRoundedRectangle((float)meterX, (float)meterY, (float)meterW, (float)meterH, 3.0f, 1.0f);
+
+      // Smooth decay tracking
+      float rawLevel = audioProcessor.getLayer(i).getCurrentLevel();
+      float currentVisual = visualLevels[i];
+      if (rawLevel > currentVisual) {
+        currentVisual = rawLevel;
+      } else {
+        currentVisual -= 0.08f; // Smooth linear decay
+        if (currentVisual < 0.0f) currentVisual = 0.0f;
+      }
+      visualLevels[i] = currentVisual;
+
+      float levelHeight = currentVisual * meterH;
+      if (levelHeight > meterH) levelHeight = (float)meterH;
+
+      if (levelHeight > 0.0f) {
+        // Glowing teal HSL gradient
+        juce::Colour accentColor = juce::Colour(9, 136, 131);
+        juce::ColourGradient meterGrad(
+            accentColor.withAlpha(0.85f), (float)meterX, (float)(meterY + meterH),
+            accentColor.brighter(0.4f).withAlpha(0.95f), (float)meterX, (float)(meterY + meterH - levelHeight),
+            false);
+        g.setGradientFill(meterGrad);
+        g.fillRoundedRectangle(area.getIntersection(juce::Rectangle<float>((float)meterX, (float)(meterY + meterH - levelHeight), (float)meterW, levelHeight)), 3.0f);
+
+        // Glow aura
+        g.setColour(accentColor.withAlpha(0.2f * currentVisual));
+        g.drawRoundedRectangle((float)meterX - 1.5f, (float)(meterY + meterH - levelHeight) - 1.5f, (float)meterW + 3.0f, levelHeight + 3.0f, 3.0f, 1.5f);
+      }
+    }
   }
 
   void resized() override {
@@ -764,15 +1051,28 @@ public:
     for (int i = 0; i < 4; ++i) {
       auto layerArea = area.removeFromLeft(sliderW);
       
-      // Position mute/solo buttons side by side at the bottom
+      // 1. Mute/Solo buttons at the bottom (height = 25)
       auto buttonArea = layerArea.removeFromBottom(25).reduced(15, 0);
       auto leftBtn = buttonArea.removeFromLeft(buttonArea.getWidth() / 2).reduced(2, 0);
       auto rightBtn = buttonArea.reduced(2, 0);
       
       muteButtons[i]->setBounds(leftBtn);
       soloButtons[i]->setBounds(rightBtn);
+      
+      layerArea.removeFromBottom(10);
 
-      // Remaining space to slider
+      // 2. Layer Title Label at the top (height = 20)
+      auto titleArea = layerArea.removeFromTop(20);
+      labels[i]->setBounds(titleArea);
+
+      // 3. Pan knob (height = 45) and its Label "PAN" (height = 15)
+      auto panKnobArea = layerArea.removeFromTop(45).reduced(25, 0);
+      panSliders[i]->setBounds(panKnobArea);
+      
+      auto panLabelArea = layerArea.removeFromTop(15);
+      panLabels[i]->setBounds(panLabelArea);
+
+      // 4. Volume fader in the remaining space
       sliders[i]->setBounds(layerArea.reduced(20, 10));
     }
   }
@@ -780,9 +1080,12 @@ public:
 private:
   GranularSynthAudioProcessor &audioProcessor;
   juce::OwnedArray<juce::Slider> sliders;
+  juce::OwnedArray<juce::Slider> panSliders;
   juce::OwnedArray<juce::Label> labels;
+  juce::OwnedArray<juce::Label> panLabels;
   juce::OwnedArray<juce::TextButton> muteButtons;
   juce::OwnedArray<juce::TextButton> soloButtons;
+  float visualLevels[4] = { 0.0f, 0.0f, 0.0f, 0.0f };
 };
 
 class CustomTabbedComponent : public juce::TabbedComponent
