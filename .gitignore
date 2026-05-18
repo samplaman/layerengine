@@ -15,3 +15,9 @@ llvm-mingw-*/
 # System files
 .DS_Store
 Thumbs.db
+
+# Installer and local build testing artifacts
+artifacts/
+*.deb
+*.pkg
+*.exe

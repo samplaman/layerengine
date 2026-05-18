@@ -54,16 +54,42 @@ jobs:
           mkdir -p artifacts
           # Find VST3
           VST_PATH=$(find build/LayerEngine_artefacts -name "LayerEngine.vst3" -type d | head -n 1)
-          # Find Standalone
+          # Find Standalone (Linux binary)
           STANDALONE_PATH=$(find build/LayerEngine_artefacts -name "LayerEngine" -type f -executable | head -n 1)
           # Find AU (macOS only)
           AU_PATH=$(find build/LayerEngine_artefacts -name "LayerEngine.component" -type d | head -n 1)
+          # Find App Bundle (macOS only)
+          APP_PATH=$(find build/LayerEngine_artefacts -name "LayerEngine.app" -type d | head -n 1)
           
           if [ -d "$VST_PATH" ]; then cp -r "$VST_PATH" artifacts/; fi
           if [ -f "$STANDALONE_PATH" ]; then cp "$STANDALONE_PATH" artifacts/; fi
           if [ -d "$AU_PATH" ]; then cp -r "$AU_PATH" artifacts/; fi
+          if [ -d "$APP_PATH" ]; then cp -r "$APP_PATH" artifacts/; fi
           
-          cd artifacts && zip -r ../LayerEngine-${{ matrix.platform }}.zip .
+          # Platform-specific packaging
+          if [ "${{ matrix.platform }}" = "macOS" ]; then
+            chmod +x build_mac_installer.sh
+            ./build_mac_installer.sh
+            mkdir -p final_zip
+            cp LayerEngine-Installer.pkg final_zip/
+            cd final_zip && zip -r ../LayerEngine-macOS.zip .
+          else
+            # Linux
+            chmod +x build_linux_installer.sh
+            ./build_linux_installer.sh
+            
+            # Create a universal package too
+            mkdir -p universal
+            cp artifacts/LayerEngine universal/
+            cp -r artifacts/LayerEngine.vst3 universal/
+            cp assets/logo.png universal/
+            cp install.sh universal/
+            
+            mkdir -p final_zip
+            cp LayerEngine-Installer.deb final_zip/
+            cd universal && zip -r ../final_zip/LayerEngine-Linux-Universal.zip .
+            cd ../final_zip && zip -r ../LayerEngine-Linux.zip .
+          fi
 
       - name: Prepare Artifacts (Windows)
         if: runner.os == 'Windows'
@@ -76,7 +102,13 @@ jobs:
           if ($vst) { Copy-Item -Path $vst.FullName -Destination artifacts/ -Recurse }
           if ($exe) { Copy-Item -Path $exe.FullName -Destination artifacts/ }
           
-          Compress-Archive -Path artifacts/* -DestinationPath LayerEngine-Windows.zip
+          # Build NSIS Installer
+          makensis installer.nsi
+          
+          # Package Installer into Zip
+          New-Item -ItemType Directory -Force -Path final_zip
+          Copy-Item -Path LayerEngine-Installer.exe -Destination final_zip/
+          Compress-Archive -Path final_zip/* -DestinationPath LayerEngine-Windows.zip
 
       - name: Upload Artifact
         uses: actions/upload-artifact@v4
