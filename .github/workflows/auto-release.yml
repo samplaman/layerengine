@@ -91,6 +91,10 @@ jobs:
             cd ../final_zip && zip -r ../LayerEngine-Linux.zip .
           fi
 
+      - name: Install NSIS (Windows)
+        if: runner.os == 'Windows'
+        run: choco install nsis -y
+
       - name: Prepare Artifacts (Windows)
         if: runner.os == 'Windows'
         shell: pwsh
@@ -103,7 +107,11 @@ jobs:
           if ($exe) { Copy-Item -Path $exe.FullName -Destination artifacts/ }
           
           # Build NSIS Installer
-          makensis installer.nsi
+          if (Test-Path "C:\Program Files (x86)\NSIS\makensis.exe") {
+              & "C:\Program Files (x86)\NSIS\makensis.exe" installer.nsi
+          } else {
+              makensis installer.nsi
+          }
           
           # Package Installer into Zip
           New-Item -ItemType Directory -Force -Path final_zip
