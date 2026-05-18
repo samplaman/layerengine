@@ -21,3 +21,6 @@ artifacts/
 *.deb
 *.pkg
 *.exe
+
+# Website contents
+website/
