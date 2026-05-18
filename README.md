@@ -5,11 +5,11 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/samplaman/layerengine/actions/workflows/build.yml">
-    <img src="https://github.com/samplaman/layerengine/actions/workflows/build.yml/badge.svg" alt="Build Status">
+  <a href="https://github.com/samplaman/layerengine/actions/workflows/auto-release.yml">
+    <img src="https://github.com/samplaman/layerengine/actions/workflows/auto-release.yml/badge.svg" alt="Build Status">
   </a>
-  <a href="https://github.com/samplaman/layerengine/actions/workflows/release.yml">
-    <img src="https://github.com/samplaman/layerengine/actions/workflows/release.yml/badge.svg" alt="Release Status">
+  <a href="https://github.com/samplaman/layerengine/actions/workflows/lint.yml">
+    <img src="https://github.com/samplaman/layerengine/actions/workflows/lint.yml/badge.svg" alt="Linter Status">
   </a>
 </p>
 
