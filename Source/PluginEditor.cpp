@@ -28,14 +28,18 @@ GranularSynthAudioProcessorEditor::GranularSynthAudioProcessorEditor(
   addAndMakeVisible(keyboard);
   addAndMakeVisible(aboutButton);
 
-  aboutButton.setButtonText(juce::CharPointer_UTF8("\xe2\x93\x98")); // ⓘ Info Icon
-  aboutButton.setColour(juce::TextButton::buttonColourId, juce::Colours::transparentBlack);
-  aboutButton.setColour(juce::TextButton::textColourOffId, juce::Colours::white);
+  aboutButton.setButtonText(
+      juce::CharPointer_UTF8("\xe2\x93\x98")); // ⓘ Info Icon
+  aboutButton.setColour(juce::TextButton::buttonColourId,
+                        juce::Colours::transparentBlack);
+  aboutButton.setColour(juce::TextButton::textColourOffId,
+                        juce::Colours::white);
   aboutButton.onClick = [this] {
     juce::AlertWindow::showMessageBoxAsync(
-        juce::AlertWindow::InfoIcon,
-        "About LayerEngine",
-        "LayerEngine v1.0.0\n\nA premium 4-layer granular synthesizer designed for cinematic soundscapes, rich pads, and sound design.\n\nBuilt with JUCE.",
+        juce::AlertWindow::InfoIcon, "About LayerEngine",
+        "LayerEngine v1.0.0\n\nA premium 4-layer granular synthesizer designed "
+        "for cinematic soundscapes, rich pads, and sound design.\n\nBuilt with "
+        "JUCE.",
         "OK");
   };
 
@@ -91,8 +95,9 @@ void GranularSynthAudioProcessorEditor::paint(juce::Graphics &g) {
   if (backgroundImage.isValid()) {
     g.drawImageWithin(backgroundImage, 0, 0, getWidth(), getHeight(),
                       juce::RectanglePlacement::fillDestination);
-    g.fillAll(juce::Colour(9, 136, 131).withAlpha(
-        0.55f)); // Rich teal overlay for blurred background
+    g.fillAll(
+        juce::Colour(9, 136, 131)
+            .withAlpha(0.55f)); // Rich teal overlay for blurred background
   } else {
     g.fillAll(juce::Colour(9, 136, 131)); // Rich teal fallback
   }
@@ -169,9 +174,11 @@ void GranularSynthAudioProcessorEditor::resized() {
 
 void GranularSynthAudioProcessorEditor::timerCallback() {
   if (!pitchWheel.isMouseButtonDown()) {
-    pitchWheel.setValue(audioProcessor.getPitchBend(), juce::dontSendNotification);
+    pitchWheel.setValue(audioProcessor.getPitchBend(),
+                        juce::dontSendNotification);
   }
   if (!modWheel.isMouseButtonDown()) {
-    modWheel.setValue(audioProcessor.getModulation(), juce::dontSendNotification);
+    modWheel.setValue(audioProcessor.getModulation(),
+                      juce::dontSendNotification);
   }
 }
