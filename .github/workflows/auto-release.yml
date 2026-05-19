@@ -145,10 +145,27 @@ jobs:
             echo "IS_PRERELEASE=true" >> $GITHUB_ENV
           fi
 
+      - name: Update Tag Reference
+        uses: actions/github-script@v7
+        with:
+          script: |
+            try {
+              await github.rest.git.updateRef({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                ref: `tags/${process.env.TAG_NAME}`,
+                sha: context.sha,
+                force: true
+              })
+            } catch (e) {
+              console.log("Tag might not exist yet, it will be created by the release step.");
+            }
+
       - name: Create/Update Release
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ env.TAG_NAME }}
+          target_commitish: ${{ github.sha }}
           name: LayerEngine ${{ env.TAG_NAME }}
           files: |
             LayerEngine-Linux/LayerEngine-Linux.zip

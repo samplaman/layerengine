@@ -35,12 +35,17 @@ GranularSynthAudioProcessorEditor::GranularSynthAudioProcessorEditor(
   aboutButton.setColour(juce::TextButton::textColourOffId,
                         juce::Colours::white);
   aboutButton.onClick = [this] {
-    juce::AlertWindow::showMessageBoxAsync(
-        juce::AlertWindow::InfoIcon, "About LayerEngine",
-        "LayerEngine v1.0.0\n\nA premium 4-layer granular synthesizer designed "
-        "for cinematic soundscapes, rich pads, and sound design.\n\nBuilt with "
-        "JUCE.",
-        "OK");
+    juce::MessageBoxOptions options = juce::MessageBoxOptions()
+        .withIconType (juce::MessageBoxIconType::InfoIcon)
+        .withTitle ("About LayerEngine")
+        .withMessage ("LayerEngine v1.0.0\n\nA premium 4-layer granular synthesizer designed for cinematic soundscapes, rich pads, and sound design.\n\nBuilt with JUCE.\n\nWebsite: layerengine.org")
+        .withButton ("Website")
+        .withButton ("OK");
+
+    juce::AlertWindow::showAsync (options, [] (int result) {
+        if (result == 0) // Website button
+            juce::URL("https://layerengine.org").launchInDefaultBrowser();
+    });
   };
 
   keyboard.setKeyWidth(14); // Keys made 2x wider
