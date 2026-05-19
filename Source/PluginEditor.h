@@ -124,12 +124,38 @@ public:
 
   void drawPopupMenuBackground(juce::Graphics &g, int width,
                                int height) override {
-    g.setColour(juce::Colours::white.withAlpha(0.95f)); // Light for readability
-    g.fillRoundedRectangle(0, 0, (float)width, (float)height, 6.0f);
+    auto area = juce::Rectangle<int>(0, 0, width, height).toFloat();
+    juce::ColourGradient bgGrad(
+        juce::Colours::white.withAlpha(0.9f), area.getTopLeft(),
+        juce::Colours::white.withAlpha(0.7f), area.getBottomRight(), false);
+    g.setGradientFill(bgGrad);
+    g.fillRoundedRectangle(area, 6.0f);
 
-    g.setColour(juce::Colours::black.withAlpha(0.15f));
-    g.drawRoundedRectangle(0.5f, 0.5f, (float)width - 1.0f,
-                           (float)height - 1.0f, 6.0f, 1.0f);
+    g.setColour(juce::Colours::white);
+    g.drawRoundedRectangle(area.reduced(0.5f), 6.0f, 1.5f);
+  }
+
+  void drawAlertBox(juce::Graphics &g, juce::AlertWindow &alert,
+                    const juce::Rectangle<int> &textArea,
+                    juce::TextLayout &textLayout) override {
+    auto area = alert.getLocalBounds().toFloat();
+
+    juce::ColourGradient bgGrad(
+        juce::Colours::white.withAlpha(0.95f), area.getTopLeft(),
+        juce::Colours::white.withAlpha(0.85f), area.getBottomRight(), false);
+    g.setGradientFill(bgGrad);
+    
+    // Fill the window completely since AlertWindows might not support transparency at the OS level
+    g.fillAll(juce::Colours::white.withAlpha(0.95f)); 
+    
+    g.setGradientFill(bgGrad);
+    g.fillRect(area);
+
+    g.setColour(juce::Colours::white);
+    g.drawRect(area, 2.0f);
+
+    g.setColour(juce::Colour(0xff2d3436));
+    textLayout.draw(g, textArea.toFloat());
   }
 
   void drawPopupMenuItem(juce::Graphics &g, const juce::Rectangle<int> &area,
@@ -205,6 +231,54 @@ public:
       g.strokePath(needle,
                    juce::PathStrokeType(lineW, juce::PathStrokeType::curved,
                                         juce::PathStrokeType::rounded));
+    }
+  }
+
+  void drawLinearSlider(juce::Graphics &g, int x, int y, int width, int height,
+                        float sliderPos, float minSliderPos, float maxSliderPos,
+                        const juce::Slider::SliderStyle style,
+                        juce::Slider &slider) override {
+    if (style == juce::Slider::LinearHorizontal || style == juce::Slider::LinearBar || style == juce::Slider::LinearBarVertical) {
+        juce::LookAndFeel_V4::drawLinearSlider(g, x, y, width, height, sliderPos, minSliderPos, maxSliderPos, style, slider);
+        return;
+    }
+
+    // Custom Linear Vertical Style (White)
+    auto bounds = juce::Rectangle<int>(x, y, width, height).toFloat();
+    float trackWidth = 4.0f;
+    juce::Rectangle<float> track(bounds.getCentreX() - trackWidth * 0.5f, bounds.getY() + 10.0f, 
+                                 trackWidth, bounds.getHeight() - 20.0f);
+
+    g.setColour(juce::Colours::white.withAlpha(0.2f));
+    g.fillRoundedRectangle(track, trackWidth * 0.5f);
+
+    if (slider.isEnabled()) {
+      // Filled track from thumb to bottom
+      juce::Rectangle<float> valTrack(track.getX(), sliderPos, track.getWidth(), track.getBottom() - sliderPos);
+      
+      // If it's bipolar (e.g. pan), we should draw from center, but for simplicity we draw from thumb down or just use the slider value
+      // Wait, pan is Rotary. Pitch wheel and Mod wheel are vertical. Mod wheel is 0 to 1, Pitch is -1 to 1.
+      // ADSR sliders are 0 to 1.
+      // For pitch wheel, sliderPos could be anywhere. Let's just draw from thumb to zero pos (if we can find it),
+      // or simply don't fill the track at all, just a clean white thumb on a dark track!
+      // Actually, drawing the value track for vertical sliders looks great if they are 0-based.
+      // Let's just draw the value track from thumb to bottom.
+      g.setColour(juce::Colours::white.withAlpha(0.8f));
+      g.fillRoundedRectangle(valTrack, trackWidth * 0.5f);
+
+      // Thumb
+      float thumbWidth = 16.0f;
+      float thumbHeight = 8.0f;
+      juce::Rectangle<float> thumb(bounds.getCentreX() - thumbWidth * 0.5f,
+                                   sliderPos - thumbHeight * 0.5f,
+                                   thumbWidth, thumbHeight);
+
+      g.setColour(juce::Colours::white);
+      g.fillRoundedRectangle(thumb, 3.0f);
+      
+      // Thumb glow
+      g.setColour(juce::Colours::white.withAlpha(0.3f));
+      g.drawRoundedRectangle(thumb.reduced(-1.0f), 3.0f, 1.5f);
     }
   }
 };
@@ -314,7 +388,7 @@ public:
       }
 
       g.setColour(juce::Colour(0xff2d3436).withAlpha(0.4f));
-      float posIdx = layer.getParams().position * getWidth();
+      float posIdx = layer.getPlayhead() * getWidth();
       g.drawVerticalLine((int)posIdx, 2.0f, (float)getHeight() - 2.0f);
     }
   }
@@ -493,28 +567,22 @@ public:
     sampleNameLabel.setColour(juce::Label::textColourId,
                               juce::Colour(0xff2d3436));
 
-    setupSlider(posSlider, "POS", 0.0f, 1.0f, layer.getParams().position, true);
-    setupSlider(sizeSlider, "SIZE", 0.01f, 1.0f, layer.getParams().size, true);
-    setupSlider(densSlider, "DENS", 1.0f, 100.0f, layer.getParams().density,
-                true);
-    setupSlider(pitchSlider, "PITCH", 0.1f, 4.0f, layer.getParams().pitch,
-                true);
+    GranularParams dp;
 
-    setupSlider(posRandSlider, "POS JIT", 0.0f, 1.0f,
-                layer.getParams().posRandomness, true);
-    setupSlider(pitchRandSlider, "PITCH JIT", 0.0f, 1.0f,
-                layer.getParams().pitchRandomness, true);
-    setupSlider(sizeRandSlider, "SIZE JIT", 0.0f, 1.0f,
-                layer.getParams().sizeRandomness, true);
+    setupSlider(posSlider, "POS", 0.0f, 1.0f, layer.getParams().position, dp.position, true);
+    setupSlider(sizeSlider, "SIZE", 0.01f, 1.0f, layer.getParams().size, dp.size, true);
+    setupSlider(densSlider, "DENS", 1.0f, 100.0f, layer.getParams().density, dp.density, true);
+    setupSlider(pitchSlider, "PITCH", 0.1f, 4.0f, layer.getParams().pitch, dp.pitch, true);
 
-    setupSlider(panSlider, "PAN", -1.0f, 1.0f, layer.getParams().pan, true);
-    setupSlider(spreadSlider, "SPREAD", 0.0f, 1.0f, layer.getParams().spread,
-                true);
+    setupSlider(posRandSlider, "POS JIT", 0.0f, 1.0f, layer.getParams().posRandomness, dp.posRandomness, true);
+    setupSlider(pitchRandSlider, "PITCH JIT", 0.0f, 1.0f, layer.getParams().pitchRandomness, dp.pitchRandomness, true);
+    setupSlider(sizeRandSlider, "SIZE JIT", 0.0f, 1.0f, layer.getParams().sizeRandomness, dp.sizeRandomness, true);
 
-    setupSlider(scanSpeedSlider, "SCAN", -2.0f, 2.0f,
-                layer.getParams().scanSpeed, true);
-    setupSlider(revProbSlider, "REV %", 0.0f, 1.0f,
-                layer.getParams().reverseProbability, true);
+    setupSlider(panSlider, "PAN", -1.0f, 1.0f, layer.getParams().pan, dp.pan, true);
+    setupSlider(spreadSlider, "SPREAD", 0.0f, 1.0f, layer.getParams().spread, dp.spread, true);
+
+    setupSlider(scanSpeedSlider, "SCAN", -2.0f, 2.0f, layer.getParams().scanSpeed, dp.scanSpeed, true);
+    setupSlider(revProbSlider, "REV %", 0.0f, 1.0f, layer.getParams().reverseProbability, dp.reverseProbability, true);
 
     addAndMakeVisible(windowShapeCombo);
     windowShapeCombo.addItem("SINE", 1);
@@ -523,16 +591,14 @@ public:
     windowShapeCombo.addItem("TRI", 4);
     windowShapeCombo.setSelectedId((int)layer.getParams().windowShape + 1);
 
-    setupSlider(cutoffSlider, "FREQ", 20.0f, 20000.0f,
-                layer.getParams().filterCutoff, true);
+    setupSlider(cutoffSlider, "FREQ", 20.0f, 20000.0f, layer.getParams().filterCutoff, dp.filterCutoff, true);
     cutoffSlider.setSkewFactorFromMidPoint(1000.0f);
-    setupSlider(resSlider, "RES", 0.1f, 1.0f, layer.getParams().filterResonance,
-                true);
+    setupSlider(resSlider, "RES", 0.1f, 1.0f, layer.getParams().filterResonance, dp.filterResonance, true);
 
-    setupSlider(atkSlider, "A", 0.01f, 2.0f, layer.getParams().attack);
-    setupSlider(decSlider, "D", 0.01f, 2.0f, layer.getParams().decay);
-    setupSlider(susSlider, "S", 0.0f, 1.0f, layer.getParams().sustain);
-    setupSlider(relSlider, "R", 0.01f, 5.0f, layer.getParams().release);
+    setupSlider(atkSlider, "A", 0.01f, 2.0f, layer.getParams().attack, dp.attack);
+    setupSlider(decSlider, "D", 0.01f, 2.0f, layer.getParams().decay, dp.decay);
+    setupSlider(susSlider, "S", 0.0f, 1.0f, layer.getParams().sustain, dp.sustain);
+    setupSlider(relSlider, "R", 0.01f, 5.0f, layer.getParams().release, dp.release);
 
     posSlider.onValueChange = [this] {
       this->layer.getParams().position = (float)posSlider.getValue();
@@ -762,20 +828,17 @@ public:
     area.removeFromTop(10);
 
     auto bottomRow = area.removeFromTop(120);
+    int bottomW = bottomRow.getWidth() / 6;
 
-    auto filterArea = bottomRow.removeFromLeft(bottomRow.getWidth() / 3);
-    int filterW = filterArea.getWidth() / 2;
-    cutoffSlider.setBounds(filterArea.removeFromLeft(filterW).reduced(6));
-    resSlider.setBounds(filterArea.removeFromLeft(filterW).reduced(6));
-
-    bottomRow.removeFromLeft(20);
-
-    auto envArea = bottomRow;
-    int envW = envArea.getWidth() / 4;
-    atkSlider.setBounds(envArea.removeFromLeft(envW).reduced(6));
-    decSlider.setBounds(envArea.removeFromLeft(envW).reduced(6));
-    susSlider.setBounds(envArea.removeFromLeft(envW).reduced(6));
-    relSlider.setBounds(envArea.removeFromLeft(envW).reduced(6));
+    auto filter1Area = bottomRow.removeFromLeft(bottomW);
+    cutoffSlider.setBounds(filter1Area.withSizeKeepingCentre(bottomW, 80).reduced(6));
+    
+    auto filter2Area = bottomRow.removeFromLeft(bottomW);
+    resSlider.setBounds(filter2Area.withSizeKeepingCentre(bottomW, 80).reduced(6));
+    atkSlider.setBounds(bottomRow.removeFromLeft(bottomW).reduced(6));
+    decSlider.setBounds(bottomRow.removeFromLeft(bottomW).reduced(6));
+    susSlider.setBounds(bottomRow.removeFromLeft(bottomW).reduced(6));
+    relSlider.setBounds(bottomRow.removeFromLeft(bottomW).reduced(6));
   }
 
 private:
@@ -788,13 +851,14 @@ private:
   }
 
   void setupSlider(juce::Slider &s, const juce::String &name, float min,
-                   float max, float val, bool rotary = false) {
+                   float max, float val, float defaultVal, bool rotary = false) {
     addAndMakeVisible(s);
     s.setRange(min, max);
     s.setValue(val);
     s.setSliderStyle(rotary ? juce::Slider::RotaryHorizontalVerticalDrag
                             : juce::Slider::LinearVertical);
     s.setTextBoxStyle(juce::Slider::NoTextBox, false, 0, 0);
+    s.setDoubleClickReturnValue(true, defaultVal);
 
     auto *label = labels.add(new juce::Label(name, name));
     addAndMakeVisible(label);
@@ -837,6 +901,15 @@ public:
     limiterThresholdSlider.init("global/limiterThreshold", audioProcessor);
     limiterReleaseSlider.init("global/limiterRelease", audioProcessor);
 
+    delayTimeSlider.init("global/delayTime", audioProcessor);
+    delayFeedbackSlider.init("global/delayFeedback", audioProcessor);
+    delayMixSlider.init("global/delayMix", audioProcessor);
+
+    phaserRateSlider.init("global/phaserRate", audioProcessor);
+    phaserDepthSlider.init("global/phaserDepth", audioProcessor);
+    phaserCenterFreqSlider.init("global/phaserCenterFreq", audioProcessor);
+    phaserMixSlider.init("global/phaserMix", audioProcessor);
+
     // 1. Reverb Bypass & Sliders
     addAndMakeVisible(reverbBypassBtn);
     reverbBypassBtn.setClickingTogglesState(true);
@@ -857,14 +930,14 @@ public:
     };
 
     setupSlider(reverbSizeSlider, "REV SIZE",
-                audioProcessor.getReverbParams().roomSize);
+                audioProcessor.getReverbParams().roomSize, 0.5f);
     reverbSizeSlider.onValueChange = [this] {
       audioProcessor.getReverbParams().roomSize =
           (float)reverbSizeSlider.getValue();
     };
 
     setupSlider(reverbWetSlider, "REV WET",
-                audioProcessor.getReverbParams().wetLevel);
+                audioProcessor.getReverbParams().wetLevel, 0.33f);
     reverbWetSlider.onValueChange = [this] {
       audioProcessor.getReverbParams().wetLevel =
           (float)reverbWetSlider.getValue();
@@ -889,25 +962,82 @@ public:
     };
 
     setupSlider(chorusRateSlider, "CHO RATE",
-                audioProcessor.getFXParams().chorusRate, 0.1f, 10.0f);
+                audioProcessor.getFXParams().chorusRate, 1.0f, 0.1f, 10.0f);
     chorusRateSlider.onValueChange = [this] {
       audioProcessor.getFXParams().chorusRate =
           (float)chorusRateSlider.getValue();
     };
 
     setupSlider(chorusDepthSlider, "CHO DEPTH",
-                audioProcessor.getFXParams().chorusDepth, 0.0f, 1.0f);
+                audioProcessor.getFXParams().chorusDepth, 0.2f, 0.0f, 1.0f);
     chorusDepthSlider.onValueChange = [this] {
       audioProcessor.getFXParams().chorusDepth =
           (float)chorusDepthSlider.getValue();
     };
 
     setupSlider(chorusMixSlider, "CHO MIX",
-                audioProcessor.getFXParams().chorusMix, 0.0f, 1.0f);
+                audioProcessor.getFXParams().chorusMix, 0.0f, 0.0f, 1.0f);
     chorusMixSlider.onValueChange = [this] {
       audioProcessor.getFXParams().chorusMix =
           (float)chorusMixSlider.getValue();
     };
+
+    // 2.5 Delay Bypass & Sliders
+    addAndMakeVisible(delayBypassBtn);
+    delayBypassBtn.setClickingTogglesState(true);
+    delayBypassBtn.setToggleState(!audioProcessor.getFXParams().delayBypass,
+                                   juce::dontSendNotification);
+    delayBypassBtn.setColour(juce::TextButton::buttonColourId,
+                              juce::Colour(45, 52, 54).withAlpha(0.4f));
+    delayBypassBtn.setColour(juce::TextButton::buttonOnColourId,
+                              juce::Colour(9, 136, 131).withAlpha(0.85f));
+    delayBypassBtn.setColour(juce::TextButton::textColourOffId,
+                              juce::Colour(120, 120, 120));
+    delayBypassBtn.setColour(juce::TextButton::textColourOnId,
+                              juce::Colours::white);
+    delayBypassBtn.onClick = [this] {
+      audioProcessor.getFXParams().delayBypass =
+          !delayBypassBtn.getToggleState();
+    };
+
+    setupSlider(delayTimeSlider, "DLY TIME", audioProcessor.getFXParams().delayTime, 250.0f, 10.0f, 2000.0f);
+    delayTimeSlider.onValueChange = [this] { audioProcessor.getFXParams().delayTime = (float)delayTimeSlider.getValue(); };
+
+    setupSlider(delayFeedbackSlider, "DLY FDBK", audioProcessor.getFXParams().delayFeedback, 0.3f, 0.0f, 0.95f);
+    delayFeedbackSlider.onValueChange = [this] { audioProcessor.getFXParams().delayFeedback = (float)delayFeedbackSlider.getValue(); };
+
+    setupSlider(delayMixSlider, "DLY MIX", audioProcessor.getFXParams().delayMix, 0.0f, 0.0f, 1.0f);
+    delayMixSlider.onValueChange = [this] { audioProcessor.getFXParams().delayMix = (float)delayMixSlider.getValue(); };
+
+    // 2.6 Phaser Bypass & Sliders
+    addAndMakeVisible(phaserBypassBtn);
+    phaserBypassBtn.setClickingTogglesState(true);
+    phaserBypassBtn.setToggleState(!audioProcessor.getFXParams().phaserBypass,
+                                   juce::dontSendNotification);
+    phaserBypassBtn.setColour(juce::TextButton::buttonColourId,
+                              juce::Colour(45, 52, 54).withAlpha(0.4f));
+    phaserBypassBtn.setColour(juce::TextButton::buttonOnColourId,
+                              juce::Colour(9, 136, 131).withAlpha(0.85f));
+    phaserBypassBtn.setColour(juce::TextButton::textColourOffId,
+                              juce::Colour(120, 120, 120));
+    phaserBypassBtn.setColour(juce::TextButton::textColourOnId,
+                              juce::Colours::white);
+    phaserBypassBtn.onClick = [this] {
+      audioProcessor.getFXParams().phaserBypass =
+          !phaserBypassBtn.getToggleState();
+    };
+
+    setupSlider(phaserRateSlider, "PHS RATE", audioProcessor.getFXParams().phaserRate, 0.5f, 0.01f, 10.0f);
+    phaserRateSlider.onValueChange = [this] { audioProcessor.getFXParams().phaserRate = (float)phaserRateSlider.getValue(); };
+
+    setupSlider(phaserDepthSlider, "PHS DPTH", audioProcessor.getFXParams().phaserDepth, 0.5f, 0.0f, 1.0f);
+    phaserDepthSlider.onValueChange = [this] { audioProcessor.getFXParams().phaserDepth = (float)phaserDepthSlider.getValue(); };
+
+    setupSlider(phaserCenterFreqSlider, "PHS FREQ", audioProcessor.getFXParams().phaserCenterFreq, 1000.0f, 50.0f, 5000.0f);
+    phaserCenterFreqSlider.onValueChange = [this] { audioProcessor.getFXParams().phaserCenterFreq = (float)phaserCenterFreqSlider.getValue(); };
+
+    setupSlider(phaserMixSlider, "PHS MIX", audioProcessor.getFXParams().phaserMix, 0.0f, 0.0f, 1.0f);
+    phaserMixSlider.onValueChange = [this] { audioProcessor.getFXParams().phaserMix = (float)phaserMixSlider.getValue(); };
 
     // 3. Filter Bypass & Sliders
     addAndMakeVisible(filterBypassBtn);
@@ -928,7 +1058,7 @@ public:
     };
 
     setupSlider(filterCutoffSlider, "MASTER HP/LP",
-                audioProcessor.getFXParams().filterCutoff, 20.0f, 20000.0f);
+                audioProcessor.getFXParams().filterCutoff, 20000.0f, 20.0f, 20000.0f);
     filterCutoffSlider.setSkewFactorFromMidPoint(1000.0f);
     filterCutoffSlider.onValueChange = [this] {
       audioProcessor.getFXParams().filterCutoff =
@@ -936,7 +1066,7 @@ public:
     };
 
     setupSlider(filterResSlider, "MST RES",
-                audioProcessor.getFXParams().filterResonance, 0.1f, 2.0f);
+                audioProcessor.getFXParams().filterResonance, 0.1f, 0.1f, 2.0f);
     filterResSlider.onValueChange = [this] {
       audioProcessor.getFXParams().filterResonance =
           (float)filterResSlider.getValue();
@@ -961,14 +1091,14 @@ public:
     };
 
     setupSlider(limiterThresholdSlider, "LMT THRESH",
-                audioProcessor.getFXParams().limiterThreshold, -40.0f, 0.0f);
+                audioProcessor.getFXParams().limiterThreshold, 0.0f, -40.0f, 0.0f);
     limiterThresholdSlider.onValueChange = [this] {
       audioProcessor.getFXParams().limiterThreshold =
           (float)limiterThresholdSlider.getValue();
     };
 
     setupSlider(limiterReleaseSlider, "LMT REL",
-                audioProcessor.getFXParams().limiterRelease, 1.0f, 500.0f);
+                audioProcessor.getFXParams().limiterRelease, 100.0f, 1.0f, 500.0f);
     limiterReleaseSlider.onValueChange = [this] {
       audioProcessor.getFXParams().limiterRelease =
           (float)limiterReleaseSlider.getValue();
@@ -1010,6 +1140,15 @@ public:
       limiterReleaseSlider.setValue(audioProcessor.getFXParams().limiterRelease,
                                     juce::dontSendNotification);
 
+    if (!delayTimeSlider.isMouseButtonDown()) delayTimeSlider.setValue(audioProcessor.getFXParams().delayTime, juce::dontSendNotification);
+    if (!delayFeedbackSlider.isMouseButtonDown()) delayFeedbackSlider.setValue(audioProcessor.getFXParams().delayFeedback, juce::dontSendNotification);
+    if (!delayMixSlider.isMouseButtonDown()) delayMixSlider.setValue(audioProcessor.getFXParams().delayMix, juce::dontSendNotification);
+
+    if (!phaserRateSlider.isMouseButtonDown()) phaserRateSlider.setValue(audioProcessor.getFXParams().phaserRate, juce::dontSendNotification);
+    if (!phaserDepthSlider.isMouseButtonDown()) phaserDepthSlider.setValue(audioProcessor.getFXParams().phaserDepth, juce::dontSendNotification);
+    if (!phaserCenterFreqSlider.isMouseButtonDown()) phaserCenterFreqSlider.setValue(audioProcessor.getFXParams().phaserCenterFreq, juce::dontSendNotification);
+    if (!phaserMixSlider.isMouseButtonDown()) phaserMixSlider.setValue(audioProcessor.getFXParams().phaserMix, juce::dontSendNotification);
+
     // Sync bypass button states
     bool expectedReverbToggle = !audioProcessor.getFXParams().reverbBypass;
     if (reverbBypassBtn.getToggleState() != expectedReverbToggle)
@@ -1030,6 +1169,14 @@ public:
     if (limiterBypassBtn.getToggleState() != expectedLimiterToggle)
       limiterBypassBtn.setToggleState(expectedLimiterToggle,
                                       juce::dontSendNotification);
+
+    bool expectedDelayToggle = !audioProcessor.getFXParams().delayBypass;
+    if (delayBypassBtn.getToggleState() != expectedDelayToggle)
+      delayBypassBtn.setToggleState(expectedDelayToggle, juce::dontSendNotification);
+
+    bool expectedPhaserToggle = !audioProcessor.getFXParams().phaserBypass;
+    if (phaserBypassBtn.getToggleState() != expectedPhaserToggle)
+      phaserBypassBtn.setToggleState(expectedPhaserToggle, juce::dontSendNotification);
   }
 
   void paint(juce::Graphics &g) override {
@@ -1048,49 +1195,62 @@ public:
   void resized() override {
     auto area = getLocalBounds().reduced(40, 20);
 
-    // Four rows, each row has a bypass button on the left
-    auto reverbArea = area.removeFromTop(area.getHeight() / 4);
-    auto reverbBtnArea = reverbArea.removeFromLeft(70).reduced(0, 20);
+    auto rowHeight = area.getHeight() / 6;
+
+    // Use a uniform slider width for all effects to create a clean left-to-right grid.
+    // 4 is the maximum number of sliders in any row (Phaser).
+    int sliderW = (area.getWidth() - 70) / 4;
+
+    auto reverbArea = area.removeFromTop(rowHeight);
+    auto reverbBtnArea = reverbArea.removeFromLeft(70).reduced(0, 10);
     reverbBypassBtn.setBounds(reverbBtnArea);
-    int revW = reverbArea.getWidth() / 2;
-    reverbSizeSlider.setBounds(reverbArea.removeFromLeft(revW).reduced(20, 10));
-    reverbWetSlider.setBounds(reverbArea.removeFromLeft(revW).reduced(20, 10));
+    reverbSizeSlider.setBounds(reverbArea.removeFromLeft(sliderW).reduced(20, 5));
+    reverbWetSlider.setBounds(reverbArea.removeFromLeft(sliderW).reduced(20, 5));
 
-    auto chorusArea = area.removeFromTop(area.getHeight() / 3);
-    auto chorusBtnArea = chorusArea.removeFromLeft(70).reduced(0, 20);
+    auto delayArea = area.removeFromTop(rowHeight);
+    auto delayBtnArea = delayArea.removeFromLeft(70).reduced(0, 10);
+    delayBypassBtn.setBounds(delayBtnArea);
+    delayTimeSlider.setBounds(delayArea.removeFromLeft(sliderW).reduced(20, 5));
+    delayFeedbackSlider.setBounds(delayArea.removeFromLeft(sliderW).reduced(20, 5));
+    delayMixSlider.setBounds(delayArea.removeFromLeft(sliderW).reduced(20, 5));
+
+    auto chorusArea = area.removeFromTop(rowHeight);
+    auto chorusBtnArea = chorusArea.removeFromLeft(70).reduced(0, 10);
     chorusBypassBtn.setBounds(chorusBtnArea);
-    int choW = chorusArea.getWidth() / 3;
-    chorusRateSlider.setBounds(chorusArea.removeFromLeft(choW).reduced(20, 10));
-    chorusDepthSlider.setBounds(
-        chorusArea.removeFromLeft(choW).reduced(20, 10));
-    chorusMixSlider.setBounds(chorusArea.removeFromLeft(choW).reduced(20, 10));
+    chorusRateSlider.setBounds(chorusArea.removeFromLeft(sliderW).reduced(20, 5));
+    chorusDepthSlider.setBounds(chorusArea.removeFromLeft(sliderW).reduced(20, 5));
+    chorusMixSlider.setBounds(chorusArea.removeFromLeft(sliderW).reduced(20, 5));
 
-    auto filterArea = area.removeFromTop(area.getHeight() / 2);
-    auto filterBtnArea = filterArea.removeFromLeft(70).reduced(0, 20);
+    auto phaserArea = area.removeFromTop(rowHeight);
+    auto phaserBtnArea = phaserArea.removeFromLeft(70).reduced(0, 10);
+    phaserBypassBtn.setBounds(phaserBtnArea);
+    phaserRateSlider.setBounds(phaserArea.removeFromLeft(sliderW).reduced(20, 5));
+    phaserDepthSlider.setBounds(phaserArea.removeFromLeft(sliderW).reduced(20, 5));
+    phaserCenterFreqSlider.setBounds(phaserArea.removeFromLeft(sliderW).reduced(20, 5));
+    phaserMixSlider.setBounds(phaserArea.removeFromLeft(sliderW).reduced(20, 5));
+
+    auto filterArea = area.removeFromTop(rowHeight);
+    auto filterBtnArea = filterArea.removeFromLeft(70).reduced(0, 10);
     filterBypassBtn.setBounds(filterBtnArea);
-    int filW = filterArea.getWidth() / 2;
-    filterCutoffSlider.setBounds(
-        filterArea.removeFromLeft(filW).reduced(20, 10));
-    filterResSlider.setBounds(filterArea.removeFromLeft(filW).reduced(20, 10));
+    filterCutoffSlider.setBounds(filterArea.removeFromLeft(sliderW).reduced(20, 5));
+    filterResSlider.setBounds(filterArea.removeFromLeft(sliderW).reduced(20, 5));
 
     auto limiterArea = area;
-    auto limiterBtnArea = limiterArea.removeFromLeft(70).reduced(0, 20);
+    auto limiterBtnArea = limiterArea.removeFromLeft(70).reduced(0, 10);
     limiterBypassBtn.setBounds(limiterBtnArea);
-    int limW = limiterArea.getWidth() / 2;
-    limiterThresholdSlider.setBounds(
-        limiterArea.removeFromLeft(limW).reduced(20, 10));
-    limiterReleaseSlider.setBounds(
-        limiterArea.removeFromLeft(limW).reduced(20, 10));
+    limiterThresholdSlider.setBounds(limiterArea.removeFromLeft(sliderW).reduced(20, 5));
+    limiterReleaseSlider.setBounds(limiterArea.removeFromLeft(sliderW).reduced(20, 5));
   }
 
 private:
   void setupSlider(juce::Slider &s, const juce::String &name, float val,
-                   float min = 0.0f, float max = 1.0f) {
+                   float defaultVal, float min = 0.0f, float max = 1.0f) {
     addAndMakeVisible(s);
     s.setSliderStyle(juce::Slider::RotaryHorizontalVerticalDrag);
     s.setRange(min, max);
     s.setValue(val);
     s.setTextBoxStyle(juce::Slider::NoTextBox, false, 0, 0);
+    s.setDoubleClickReturnValue(true, defaultVal);
 
     auto *label = labels.add(new juce::Label(name, name));
     addAndMakeVisible(label);
@@ -1103,9 +1263,11 @@ private:
 
   GranularSynthAudioProcessor &audioProcessor;
   juce::TextButton reverbBypassBtn{"ON"}, chorusBypassBtn{"ON"},
-      filterBypassBtn{"ON"}, limiterBypassBtn{"ON"};
+      filterBypassBtn{"ON"}, limiterBypassBtn{"ON"}, delayBypassBtn{"ON"}, phaserBypassBtn{"ON"};
   MappedSlider reverbSizeSlider, reverbWetSlider;
   MappedSlider chorusRateSlider, chorusDepthSlider, chorusMixSlider;
+  MappedSlider delayTimeSlider, delayFeedbackSlider, delayMixSlider;
+  MappedSlider phaserRateSlider, phaserDepthSlider, phaserCenterFreqSlider, phaserMixSlider;
   MappedSlider filterCutoffSlider, filterResSlider;
   MappedSlider limiterThresholdSlider, limiterReleaseSlider;
   juce::OwnedArray<juce::Label> labels;
@@ -1123,6 +1285,7 @@ public:
       s->setRange(0.0f, 1.0f);
       s->setValue(audioProcessor.getLayer(i).getParams().volume);
       s->setTextBoxStyle(juce::Slider::NoTextBox, false, 0, 0);
+      s->setDoubleClickReturnValue(true, 0.8f);
       s->onValueChange = [this, i, s] {
         audioProcessor.getLayer(i).getParams().volume = (float)s->getValue();
       };
@@ -1135,6 +1298,7 @@ public:
       ps->setRange(-1.0f, 1.0f);
       ps->setValue(audioProcessor.getLayer(i).getParams().pan);
       ps->setTextBoxStyle(juce::Slider::NoTextBox, false, 0, 0);
+      ps->setDoubleClickReturnValue(true, 0.0f);
       ps->onValueChange = [this, i, ps] {
         audioProcessor.getLayer(i).getParams().pan = (float)ps->getValue();
       };

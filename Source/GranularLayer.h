@@ -60,6 +60,7 @@ public:
   }
   juce::String getCurrentSamplePath() const { return currentSamplePath; }
   float getCurrentLevel() const { return currentLevel.load(); }
+  float getPlayhead() const { return playhead; }
 
   struct Grain {
     double startSample;
@@ -83,6 +84,8 @@ private:
   GranularParams params;
   juce::String currentSamplePath;
   std::atomic<float> currentLevel{0.0f};
+  float playhead = 0.0f;
+  float lastPosParam = -1.0f;
 
   double currentSampleRate = 44100.0;
   std::vector<Grain> grains;

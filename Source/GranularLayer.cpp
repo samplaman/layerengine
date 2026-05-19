@@ -131,7 +131,7 @@ void GranularLayer::spawnGrain() {
     if (!grain.active) {
       // Position with randomness
       float randPos = (random.nextFloat() - 0.5f) * params.posRandomness;
-      float pos = juce::jlimit(0.0f, 1.0f, params.position + randPos);
+      float pos = juce::jlimit(0.0f, 1.0f, playhead + randPos);
       grain.startSample = pos * (sampleBuffer.getNumSamples() - 1);
 
       // Size with randomness
@@ -187,14 +187,19 @@ void GranularLayer::processBlock(juce::AudioBuffer<float> &buffer,
 
   int numSamples = buffer.getNumSamples();
 
+  if (params.position != lastPosParam) {
+    playhead = params.position;
+    lastPosParam = params.position;
+  }
+
   // Update playhead (Scanning)
   if (params.scanSpeed != 0.0f) {
-    params.position +=
+    playhead +=
         (params.scanSpeed / (float)currentSampleRate) * numSamples;
-    while (params.position > 1.0f)
-      params.position -= 1.0f;
-    while (params.position < 0.0f)
-      params.position += 1.0f;
+    while (playhead > 1.0f)
+      playhead -= 1.0f;
+    while (playhead < 0.0f)
+      playhead += 1.0f;
   }
 
   juce::ADSR::Parameters adsrParams;

@@ -41,6 +41,15 @@ public:
     float chorusDepth = 0.2f;
     float chorusMix = 0.0f;
 
+    float delayTime = 250.0f; // ms
+    float delayFeedback = 0.3f;
+    float delayMix = 0.0f;
+
+    float phaserRate = 0.5f;
+    float phaserDepth = 0.5f;
+    float phaserCenterFreq = 1000.0f;
+    float phaserMix = 0.0f;
+
     float filterCutoff = 20000.0f;
     float filterResonance = 0.1f;
 
@@ -49,6 +58,8 @@ public:
 
     bool reverbBypass = false;
     bool chorusBypass = false;
+    bool delayBypass = false;
+    bool phaserBypass = false;
     bool filterBypass = false;
     bool limiterBypass = false;
   };
@@ -100,6 +111,8 @@ private:
   juce::dsp::Reverb::Parameters reverbParams;
 
   juce::dsp::Chorus<float> chorus;
+  juce::dsp::DelayLine<float> delay{192000};
+  juce::dsp::Phaser<float> phaser;
   juce::dsp::StateVariableTPTFilter<float> masterFilter;
   juce::dsp::Limiter<float> limiter;
   FXParams fxParams;

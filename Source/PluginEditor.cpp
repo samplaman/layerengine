@@ -44,7 +44,8 @@ GranularSynthAudioProcessorEditor::GranularSynthAudioProcessorEditor(
                 "designed for cinematic soundscapes, rich pads, and sound "
                 "design.\n\nBuilt with JUCE.\n\nWebsite: layerengine.org")
             .withButton("Website")
-            .withButton("OK");
+            .withButton("OK")
+            .withAssociatedComponent(this);
 
     juce::AlertWindow::showAsync(options, [](int result) {
       if (result == 0) // Website button
@@ -62,6 +63,7 @@ GranularSynthAudioProcessorEditor::GranularSynthAudioProcessorEditor(
   pitchWheel.setRange(-1.0, 1.0);
   pitchWheel.setValue(0.0);
   pitchWheel.setTextBoxStyle(juce::Slider::NoTextBox, false, 0, 0);
+  pitchWheel.setDoubleClickReturnValue(true, 0.0);
   pitchWheel.onValueChange = [this] {
     audioProcessor.setPitchBend((float)pitchWheel.getValue());
   };
@@ -71,6 +73,7 @@ GranularSynthAudioProcessorEditor::GranularSynthAudioProcessorEditor(
   modWheel.setRange(0.0, 1.0);
   modWheel.setValue(0.0);
   modWheel.setTextBoxStyle(juce::Slider::NoTextBox, false, 0, 0);
+  modWheel.setDoubleClickReturnValue(true, 0.0);
   modWheel.onValueChange = [this] {
     audioProcessor.setModulation((float)modWheel.getValue());
   };

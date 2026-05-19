@@ -28,6 +28,8 @@ void GranularSynthAudioProcessor::prepareToPlay(double sampleRate,
 
   reverb.prepare(spec);
   chorus.prepare(spec);
+  delay.prepare(spec);
+  phaser.prepare(spec);
   masterFilter.prepare(spec);
   masterFilter.setType(juce::dsp::StateVariableTPTFilterType::lowpass);
   limiter.prepare(spec);
@@ -103,6 +105,12 @@ void GranularSynthAudioProcessor::processBlock(juce::AudioBuffer<float> &buffer,
   chorus.setDepth(fxParams.chorusDepth);
   chorus.setMix(fxParams.chorusMix);
 
+  phaser.setRate(fxParams.phaserRate);
+  phaser.setDepth(fxParams.phaserDepth);
+  phaser.setCentreFrequency(fxParams.phaserCenterFreq);
+  phaser.setFeedback(0.5f);
+  phaser.setMix(fxParams.phaserMix);
+
   masterFilter.setCutoffFrequency(fxParams.filterCutoff);
   masterFilter.setResonance(fxParams.filterResonance);
 
@@ -114,6 +122,30 @@ void GranularSynthAudioProcessor::processBlock(juce::AudioBuffer<float> &buffer,
 
   if (!fxParams.chorusBypass && fxParams.chorusMix > 0.01f)
     chorus.process(context);
+
+  if (!fxParams.phaserBypass && fxParams.phaserMix > 0.01f)
+    phaser.process(context);
+
+  if (!fxParams.delayBypass && fxParams.delayMix > 0.01f) {
+    float delayInSamples = juce::jmax(0.1f, fxParams.delayTime * (float)getSampleRate() / 1000.0f);
+    for (size_t channel = 0; channel < block.getNumChannels(); ++channel) {
+        auto* channelData = block.getChannelPointer(channel);
+        for (size_t i = 0; i < block.getNumSamples(); ++i) {
+            float input = channelData[i];
+            float delayed = delay.popSample((int)channel, delayInSamples);
+            delay.pushSample((int)channel, input + delayed * fxParams.delayFeedback);
+            channelData[i] = input * (1.0f - fxParams.delayMix) + delayed * fxParams.delayMix;
+        }
+    }
+  } else {
+    for (size_t channel = 0; channel < block.getNumChannels(); ++channel) {
+        auto* channelData = block.getChannelPointer(channel);
+        for (size_t i = 0; i < block.getNumSamples(); ++i) {
+            delay.pushSample((int)channel, channelData[i]); // Keep delay buffer warm
+            delay.popSample((int)channel, 0.1f);
+        }
+    }
+  }
 
   if (!fxParams.reverbBypass)
     reverb.process(context);
@@ -144,6 +176,15 @@ void GranularSynthAudioProcessor::getStateInformation(
   xmlGlobal->setAttribute("chorusDepth", fxParams.chorusDepth);
   xmlGlobal->setAttribute("chorusMix", fxParams.chorusMix);
   xmlGlobal->setAttribute("chorusBypass", fxParams.chorusBypass);
+  xmlGlobal->setAttribute("delayTime", fxParams.delayTime);
+  xmlGlobal->setAttribute("delayFeedback", fxParams.delayFeedback);
+  xmlGlobal->setAttribute("delayMix", fxParams.delayMix);
+  xmlGlobal->setAttribute("delayBypass", fxParams.delayBypass);
+  xmlGlobal->setAttribute("phaserRate", fxParams.phaserRate);
+  xmlGlobal->setAttribute("phaserDepth", fxParams.phaserDepth);
+  xmlGlobal->setAttribute("phaserCenterFreq", fxParams.phaserCenterFreq);
+  xmlGlobal->setAttribute("phaserMix", fxParams.phaserMix);
+  xmlGlobal->setAttribute("phaserBypass", fxParams.phaserBypass);
   xmlGlobal->setAttribute("filterCutoff", fxParams.filterCutoff);
   xmlGlobal->setAttribute("filterResonance", fxParams.filterResonance);
   xmlGlobal->setAttribute("filterBypass", fxParams.filterBypass);
@@ -226,6 +267,26 @@ void GranularSynthAudioProcessor::setStateInformation(const void *data,
           (float)xmlGlobal->getDoubleAttribute("chorusMix", fxParams.chorusMix);
       fxParams.chorusBypass =
           xmlGlobal->getBoolAttribute("chorusBypass", fxParams.chorusBypass);
+
+      fxParams.delayTime = (float)xmlGlobal->getDoubleAttribute(
+          "delayTime", fxParams.delayTime);
+      fxParams.delayFeedback = (float)xmlGlobal->getDoubleAttribute(
+          "delayFeedback", fxParams.delayFeedback);
+      fxParams.delayMix =
+          (float)xmlGlobal->getDoubleAttribute("delayMix", fxParams.delayMix);
+      fxParams.delayBypass =
+          xmlGlobal->getBoolAttribute("delayBypass", fxParams.delayBypass);
+
+      fxParams.phaserRate = (float)xmlGlobal->getDoubleAttribute(
+          "phaserRate", fxParams.phaserRate);
+      fxParams.phaserDepth = (float)xmlGlobal->getDoubleAttribute(
+          "phaserDepth", fxParams.phaserDepth);
+      fxParams.phaserCenterFreq = (float)xmlGlobal->getDoubleAttribute(
+          "phaserCenterFreq", fxParams.phaserCenterFreq);
+      fxParams.phaserMix =
+          (float)xmlGlobal->getDoubleAttribute("phaserMix", fxParams.phaserMix);
+      fxParams.phaserBypass =
+          xmlGlobal->getBoolAttribute("phaserBypass", fxParams.phaserBypass);
 
       fxParams.filterCutoff = (float)xmlGlobal->getDoubleAttribute(
           "filterCutoff", fxParams.filterCutoff);
@@ -410,6 +471,20 @@ float GranularSynthAudioProcessor::getParameterValue(
       return fxParams.chorusDepth;
     if (name == "chorusMix")
       return fxParams.chorusMix;
+    if (name == "delayTime")
+      return fxParams.delayTime;
+    if (name == "delayFeedback")
+      return fxParams.delayFeedback;
+    if (name == "delayMix")
+      return fxParams.delayMix;
+    if (name == "phaserRate")
+      return fxParams.phaserRate;
+    if (name == "phaserDepth")
+      return fxParams.phaserDepth;
+    if (name == "phaserCenterFreq")
+      return fxParams.phaserCenterFreq;
+    if (name == "phaserMix")
+      return fxParams.phaserMix;
     if (name == "filterCutoff")
       return fxParams.filterCutoff;
     if (name == "filterResonance")
@@ -481,6 +556,20 @@ void GranularSynthAudioProcessor::setParameterValue(const juce::String &paramId,
       fxParams.chorusDepth = val;
     else if (name == "chorusMix")
       fxParams.chorusMix = val;
+    else if (name == "delayTime")
+      fxParams.delayTime = val;
+    else if (name == "delayFeedback")
+      fxParams.delayFeedback = val;
+    else if (name == "delayMix")
+      fxParams.delayMix = val;
+    else if (name == "phaserRate")
+      fxParams.phaserRate = val;
+    else if (name == "phaserDepth")
+      fxParams.phaserDepth = val;
+    else if (name == "phaserCenterFreq")
+      fxParams.phaserCenterFreq = val;
+    else if (name == "phaserMix")
+      fxParams.phaserMix = val;
     else if (name == "filterCutoff")
       fxParams.filterCutoff = val;
     else if (name == "filterResonance")
