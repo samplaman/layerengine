@@ -48,7 +48,7 @@ GranularSynthAudioProcessorEditor::GranularSynthAudioProcessorEditor(
             .withAssociatedComponent(this);
 
     juce::AlertWindow::showAsync(options, [](int result) {
-      if (result == 0) // Website button
+      if (result == 1) // Website button
         juce::URL("https://layerengine.org").launchInDefaultBrowser();
     });
   };
