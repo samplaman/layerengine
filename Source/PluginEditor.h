@@ -267,18 +267,17 @@ public:
       g.fillRoundedRectangle(valTrack, trackWidth * 0.5f);
 
       // Thumb
-      float thumbWidth = 16.0f;
-      float thumbHeight = 8.0f;
-      juce::Rectangle<float> thumb(bounds.getCentreX() - thumbWidth * 0.5f,
-                                   sliderPos - thumbHeight * 0.5f,
-                                   thumbWidth, thumbHeight);
+      float thumbSize = 16.0f;
+      juce::Rectangle<float> thumb(bounds.getCentreX() - thumbSize * 0.5f,
+                                   sliderPos - thumbSize * 0.5f,
+                                   thumbSize, thumbSize);
 
       g.setColour(juce::Colours::white);
-      g.fillRoundedRectangle(thumb, 3.0f);
+      g.fillEllipse(thumb);
       
       // Thumb glow
       g.setColour(juce::Colours::white.withAlpha(0.3f));
-      g.drawRoundedRectangle(thumb.reduced(-1.0f), 3.0f, 1.5f);
+      g.drawEllipse(thumb.reduced(-1.0f), 1.5f);
     }
   }
 };
