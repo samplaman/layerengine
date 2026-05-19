@@ -17,6 +17,10 @@
   <img src="assets/screen.png" alt="Layer Engine Screenshot" width="750">
 </p>
 
+<p align="center">
+  <img src="assets/screen2.png" alt="Layer Engine FX UI" width="750">
+</p>
+
 ---
 
 **Layer Engine** is a high-performance, professional-grade quad-layer granular synthesizer built with C++ and the JUCE framework. Designed for deep sound design and atmospheric textures, LayerEngine allows users to stack up to four independent granular engines, each with its own modulation, filtering, and spatialization controls.
