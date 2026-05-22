@@ -1,0 +1,276 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LayerEngine — Quad-Layer Granular Synthesizer</title>
+    <meta name="description"
+        content="Stunning quad-layer granular synthesis engine and professional standalone/VST3 audio plugin.">
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=Syne:wght@700;800&display=swap"
+        rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+
+    <!-- Cinematic Background -->
+    <div class="space-bg"></div>
+
+    <!-- Header / Navbar -->
+    <header class="navbar fade-in">
+        <div class="nav-container">
+            <a href="#" class="logo-area">
+                <img src="assets/logo.png" alt="LayerEngine Logo" class="nav-logo">
+
+            </a>
+            <nav class="nav-links">
+                <a href="#features">Features</a>
+                <a href="#specifications">Specs</a>
+                <a href="https://github.com/samplaman/layerengine" target="_blank" rel="noopener noreferrer">GitHub</a>
+                <a href="#downloads" class="btn btn-secondary">Get Installer</a>
+            </nav>
+        </div>
+    </header>
+
+    <!-- Hero Section -->
+    <section class="hero-section">
+        <div class="hero-container">
+            <div class="hero-content fade-in-up">
+                <div class="badge">VST3 • AU • STANDALONE</div>
+                <h1 class="hero-title">Stack. Shape. <br><span>Granulate.</span></h1>
+                <p class="hero-subtitle">
+                    Stack up to four independent synthesis engines, model cinematic atmospheres, and explore premium
+                    organic granular textures with LayerEngine.
+                </p>
+                <div class="hero-actions">
+                    <a href="#downloads" class="btn btn-primary">Download Free Installer</a>
+                </div>
+            </div>
+            <div class="hero-visual fade-in-up delay-1">
+                <div class="frosted-frame">
+                    <img src="assets/screen.png" alt="LayerEngine Interface" class="product-screenshot">
+                    <div class="glow-accent-1"></div>
+                    <div class="glow-accent-2"></div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+
+
+    <!-- Feature Tabs Section -->
+    <section id="features" class="features-section">
+        <div class="section-container">
+            <div class="section-header">
+
+            </div>
+
+            <div class="tabs-container glass-panel">
+                <div class="tabs-nav">
+                    <button class="tab-btn active" data-tab="layer">Quad-Layer</button>
+                    <button class="tab-btn" data-tab="filter">TPT Filter & ADSR</button>
+                    <button class="tab-btn" data-tab="fx">Master FX & Limiter</button>
+                    <button class="tab-btn" data-tab="midi">MIDI Feedback</button>
+                </div>
+                <div class="tabs-content">
+                    <!-- Tab 1 -->
+                    <div class="tab-pane active" id="layer">
+                        <h3>Stack independent granular textures</h3>
+                        <p>Configure up to 4 layers simultaneously. Each layer boasts independent audio sample loading,
+                            pan width, volume slider, and mute/solo controls. Drag and drop audio files onto any layer
+                            tab to construct lush organic pads, morphing textures, or glitch percussion.</p>
+                        <div class="features-grid">
+                            <div class="feature-card">
+                                <h4>Sample Mapping</h4>
+                                <p>Automated wave loading with immediate background RAM buffer preparation.</p>
+                            </div>
+                            <div class="feature-card">
+                                <h4>Jitter Modulation</h4>
+                                <p>Inject organic randomness into position, size, and grain pitches.</p>
+                            </div>
+                        </div>
+                    </div>
+                    <!-- Tab 2 -->
+                    <div class="tab-pane" id="filter">
+                        <h3>Model precise synth envelopes</h3>
+                        <p>Each synthesis layer includes dedicated control stages to sculpt amplitude and frequency
+                            spectrum in real-time.</p>
+                        <div class="features-grid">
+                            <div class="feature-card">
+                                <h4>ADSR Envelope</h4>
+                                <p>Sculpt the attack, decay, sustain, and release curves per granular voice.</p>
+                            </div>
+                            <div class="feature-card">
+                                <h4>State Variable Filter</h4>
+                                <p>A pristine Topology-Preserving Transform (TPT) filter featuring sweeping Lowpass,
+                                    Cutoff, and Resonance parameters.</p>
+                            </div>
+                        </div>
+                    </div>
+                    <!-- Tab 3 -->
+                    <div class="tab-pane" id="fx">
+                        <h3>Polished global effects engine</h3>
+                        <p>Complete your soundscapes in the dedicated Master FX page, featuring three advanced
+                            processors working in series.</p>
+                        <div class="features-grid">
+                            <div class="feature-card">
+                                <h4>Stereo Chorus</h4>
+                                <p>Rich modulation depth and rate settings to widen and animate mono sound sources.</p>
+                            </div>
+                            <div class="feature-card">
+                                <h4>Brickwall Limiter</h4>
+                                <p>A high-speed lookahead limiter to prevent master clipping and ensure broadcast-safe
+                                    outputs.</p>
+                            </div>
+                        </div>
+                    </div>
+                    <!-- Tab 4 -->
+                    <div class="tab-pane" id="midi">
+                        <h3>Live Automation & DAW Integration</h3>
+                        <p>Experience real-time tactile response with full MIDI control and dynamic host integration.
+                        </p>
+                        <div class="features-grid">
+                            <div class="feature-card">
+                                <h4>Bidirectional Controls</h4>
+                                <p>Synthesizer knobs and sliders instantly reflect MIDI modulation wheel movements and
+                                    automation curves.</p>
+                            </div>
+                            <div class="feature-card">
+                                <h4>MPE & Keyboard Control</h4>
+                                <p>Standard pitch wheel and expressiveness mappings for fluid playability.</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Gallery Section -->
+    <section class="features-section" style="padding-top: 0;">
+        <div class="section-container">
+            <div class="section-header" style="text-align: center; margin-bottom: 3rem;">
+                <h2 class="section-title">Interface Gallery</h2>
+                <p class="section-desc" style="color: var(--text-muted); max-width: 750px; margin: 0.8rem auto 0;">Take a closer look at LayerEngine's premium glassmorphism interface and extensive control sections.</p>
+            </div>
+            
+            <div class="download-cards" style="gap: 1.5rem;">
+                <div class="frosted-frame hover-scale" style="padding: 6px; box-shadow: var(--shadow-soft);">
+                    <img src="assets/gallery-1.png" alt="Gallery Image 1" class="product-screenshot">
+                </div>
+                <div class="frosted-frame hover-scale" style="padding: 6px; box-shadow: var(--shadow-soft);">
+                    <img src="assets/gallery-2.png" alt="Gallery Image 2" class="product-screenshot">
+                </div>
+                <div class="frosted-frame hover-scale" style="padding: 6px; box-shadow: var(--shadow-soft);">
+                    <img src="assets/gallery-3.png" alt="Gallery Image 3" class="product-screenshot">
+                </div>
+                <div class="frosted-frame hover-scale" style="padding: 6px; box-shadow: var(--shadow-soft);">
+                    <img src="assets/screen2.png" alt="Master FX Suite" class="product-screenshot">
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Downloads Center -->
+    <section id="downloads" class="downloads-section">
+        <div class="section-container">
+            <div class="section-header" style="text-align: center; margin-bottom: 3rem;">
+                <h2 class="section-title">Download Center</h2>
+                <p class="section-desc" style="color: var(--text-muted); max-width: 750px; margin: 0.8rem auto 0;">Native Standalone bundles and plugin packages are securely hosted on GitHub Releases.</p>
+            </div>
+
+            <div class="download-cards">
+                <!-- Windows -->
+                <div class="download-card glass-panel hover-scale">
+                    <div class="platform-icon">🪟</div>
+                    <h3>Windows</h3>
+                    <p class="platform-desc">Includes Standalone Application and VST3 Plugin.</p>
+                    <p class="install-folder">Installs to C:\Program Files\LayerEngine</p>
+                    <a href="https://github.com/samplaman/layerengine/releases/download/latest/LayerEngine-Windows.zip" class="btn btn-primary btn-block">Download Windows</a>
+                    <button class="btn btn-secondary btn-block open-modal-btn" data-platform="windows" style="margin-top: 0.6rem;">Setup Guide</button>
+                </div>
+                <!-- macOS -->
+                <div class="download-card glass-panel hover-scale">
+                    <div class="platform-icon">🍏</div>
+                    <h3>macOS</h3>
+                    <p class="platform-desc">Includes Standalone App, VST3, and AU Component plugins.</p>
+                    <p class="install-folder">Installs to /Applications and Plugins folders</p>
+                    <a href="https://github.com/samplaman/layerengine/releases/download/latest/LayerEngine-macOS.zip" class="btn btn-primary btn-block">Download macOS</a>
+                    <button class="btn btn-secondary btn-block open-modal-btn" data-platform="macos" style="margin-top: 0.6rem;">Setup Guide</button>
+                </div>
+                <!-- Linux -->
+                <div class="download-card glass-panel hover-scale">
+                    <div class="platform-icon">🐧</div>
+                    <h3>Linux</h3>
+                    <p class="platform-desc">Debian Installer Package (.deb), Universal script, and standalone CLAP plugin.</p>
+                    <p class="install-folder">Installs system-wide or user-space folders</p>
+                    <a href="https://github.com/samplaman/layerengine/releases/download/latest/LayerEngine-Linux-Universal.zip" class="btn btn-primary btn-block">Download Linux (Universal)</a>
+                    <a href="https://github.com/samplaman/layerengine/releases/download/latest/LayerEngine-Linux-Debian.zip" class="btn btn-secondary btn-block" style="margin-top: 0.6rem;">Download .deb Package</a>
+                    <a href="https://github.com/samplaman/layerengine/releases/download/latest/LayerEngine-Linux.clap" class="btn btn-secondary btn-block" style="margin-top: 0.6rem;">Download CLAP Plugin</a>
+                    <button class="btn btn-secondary btn-block open-modal-btn" data-platform="linux" style="margin-top: 0.6rem;">Setup Guide</button>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Specifications Section -->
+    <section id="specifications" class="specs-section">
+        <div class="section-container">
+            <div class="specs-grid glass-panel">
+                <div class="specs-column">
+                    <h3>Compatibility</h3>
+                    <ul>
+                        <li><strong>Windows:</strong> 10 / 11 (64-bit)</li>
+                        <li><strong>macOS:</strong> 11.0 or higher (Intel / Apple Silicon Native)</li>
+                        <li><strong>Linux:</strong> Ubuntu 22.04+, Debian, Arch, Fedora</li>
+                        </li>
+                </div>
+                <div class="specs-column">
+                    <h3>Formats</h3>
+                    <ul>
+                        <li><strong>VST3:</strong> VST 3.7.9 standard</li>
+                        <li><strong>AU:</strong> Audio Unit v2 (macOS only)</li>
+                        <li><strong>CLAP:</strong> CLever Audio Plug-in API</li>
+                        <li><strong>Standalone:</strong> Full JUCE Audio/MIDI Host application</li>
+                        </li>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Fork me on GitHub Section -->
+    <section class="github-section" style="text-align: center; padding: 4rem 1rem;">
+        <div class="section-container">
+            <h2 class="section-title">Open Source</h2>
+            <p class="section-desc" style="color: var(--text-muted); max-width: 600px; margin: 0.8rem auto 2rem;">LayerEngine is proudly open-source. Help us improve it, report issues, or contribute new features.</p>
+            <a href="https://github.com/samplaman/layerengine" target="_blank" rel="noopener noreferrer" class="btn btn-primary" style="display: inline-block;">Fork me on GitHub</a>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="footer">
+        <div class="footer-container">
+            <p>&copy; 2026 LayerEngine Granular Synthesizer. Developed by Eoin O Dowd.</p>
+            <p>Made with JUCE 8 & C++ | <a href="https://github.com/samplaman/layerengine" target="_blank" rel="noopener noreferrer" style="color: inherit; text-decoration: underline;">GitHub</a></p>
+        </div>
+    </footer>
+
+    <!-- Installer Popup Modal -->
+    <div id="installerModal" class="modal-overlay">
+        <div class="modal-container glass-panel">
+            <button class="close-modal-btn">&times;</button>
+            <div id="modalContent">
+                <!-- Content gets dynamically populated -->
+            </div>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+
+</html>
