@@ -8,13 +8,10 @@
   <a href="https://github.com/samplaman/layerengine/actions/workflows/auto-release.yml">
     <img src="https://github.com/samplaman/layerengine/actions/workflows/auto-release.yml/badge.svg" alt="Build Status">
   </a>
-  <a href="https://github.com/samplaman/layerengine/actions/workflows/lint.yml">
-    <img src="https://github.com/samplaman/layerengine/actions/workflows/lint.yml/badge.svg" alt="Linter Status">
-  </a>
 </p>
 
 <p align="center">
-  <img src="assets/screen.png" alt="Layer Engine Screenshot" width="750">
+  <img src="assets/screen2.png" alt="Layer Engine FX UI" width="750">
 </p>
 
 <p align="center">
@@ -47,7 +44,7 @@
 
 - **macOS**: VST3, Audio Unit (AU), Standalone App
 - **Windows**: VST3, Standalone App (.exe installer)
-- **Linux**: VST3, Standalone App (universal script & `.deb`), CLAP (available as a separate release asset)
+- **Linux**: VST3, Standalone App (universal script & `.deb`)
 
 ## 🛠 Tech Stack
 
