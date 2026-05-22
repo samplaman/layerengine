@@ -44,7 +44,7 @@
 
 - **macOS**: VST3, Audio Unit (AU), Standalone App
 - **Windows**: VST3, Standalone App (.exe installer)
-- **Linux**: VST3, Standalone App (universal script & `.deb`)
+- **Linux**: VST3, Standalone App (universal script & `.deb`), CLAP (available as a separate release asset)
 
 ## 🛠 Tech Stack
 

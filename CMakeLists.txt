@@ -11,9 +11,15 @@ FetchContent_Declare(
     GIT_TAG        origin/master 
 )
 FetchContent_MakeAvailable(JUCE)
+FetchContent_Declare(
+    clap-juce-extensions
+    GIT_REPOSITORY https://github.com/free-audio/clap-juce-extensions.git
+    GIT_TAG        main
+)
+FetchContent_MakeAvailable(clap-juce-extensions)
 
 if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
-    set(PLUGIN_FORMATS VST3 Standalone)
+    set(PLUGIN_FORMATS VST3 Standalone CLAP)
 elseif(CMAKE_SYSTEM_NAME STREQUAL "Darwin")
     set(PLUGIN_FORMATS AU VST3 Standalone)
 else()
@@ -33,6 +39,11 @@ juce_add_plugin(LayerEngine
     FORMATS ${PLUGIN_FORMATS}
     ICON_BIG assets/icon.png
     ICON_SMALL assets/icon.png
+)
+
+clap_juce_extensions_plugin(TARGET LayerEngine 
+    CLAP_ID "com.eoinodowd.layerengine"
+    CLAP_FEATURES "instrument"
 )
 
 juce_add_binary_data(Assets

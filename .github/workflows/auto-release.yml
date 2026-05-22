@@ -54,6 +54,8 @@ jobs:
           mkdir -p artifacts
           # Find VST3
           VST_PATH=$(find build/LayerEngine_artefacts -name "LayerEngine.vst3" -type d | head -n 1)
+          # Find CLAP
+          CLAP_PATH=$(find build/LayerEngine_artefacts -name "LayerEngine.clap" | head -n 1)
           # Find Standalone (Linux binary)
           STANDALONE_PATH=$(find build/LayerEngine_artefacts -name "LayerEngine" -type f -executable | head -n 1)
           # Find AU (macOS only)
@@ -62,6 +64,7 @@ jobs:
           APP_PATH=$(find build/LayerEngine_artefacts -name "LayerEngine.app" -type d | head -n 1)
           
           if [ -d "$VST_PATH" ]; then cp -r "$VST_PATH" artifacts/; fi
+          if [ -n "$CLAP_PATH" ]; then cp -r "$CLAP_PATH" artifacts/; fi
           if [ -f "$STANDALONE_PATH" ]; then cp "$STANDALONE_PATH" artifacts/; fi
           if [ -d "$AU_PATH" ]; then cp -r "$AU_PATH" artifacts/; fi
           if [ -d "$APP_PATH" ]; then cp -r "$APP_PATH" artifacts/; fi
@@ -94,6 +97,11 @@ jobs:
             # universal zip
             cd universal && zip -r ../LayerEngine-Linux-Universal.zip .
             cd ..
+
+            # clap direct asset
+            if [ -e "artifacts/LayerEngine.clap" ]; then
+              cp -r artifacts/LayerEngine.clap LayerEngine-Linux.clap
+            fi
           fi
 
       - name: Install NSIS (Windows)
@@ -127,7 +135,9 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: LayerEngine-${{ matrix.platform }}
-          path: LayerEngine-*.zip
+          path: |
+            LayerEngine-*.zip
+            LayerEngine-*.clap
 
   release:
     name: Create Release
@@ -175,6 +185,7 @@ jobs:
           files: |
             LayerEngine-Linux/LayerEngine-Linux-Universal.zip
             LayerEngine-Linux/LayerEngine-Linux-Debian.zip
+            LayerEngine-Linux/LayerEngine-Linux.clap
             LayerEngine-macOS/LayerEngine-macOS.zip
             LayerEngine-Windows/LayerEngine-Windows.zip
           draft: false
