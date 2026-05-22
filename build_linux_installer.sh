@@ -6,6 +6,7 @@ DEB_DIR="linux_deb/LayerEngine-Linux"
 mkdir -p "$DEB_DIR/DEBIAN"
 mkdir -p "$DEB_DIR/usr/bin"
 mkdir -p "$DEB_DIR/usr/lib/vst3"
+mkdir -p "$DEB_DIR/usr/lib/clap"
 mkdir -p "$DEB_DIR/usr/share/applications"
 mkdir -p "$DEB_DIR/usr/share/pixmaps"
 
@@ -28,6 +29,10 @@ fi
 
 if [ -d "artifacts/LayerEngine.vst3" ]; then
     cp -r "artifacts/LayerEngine.vst3" "$DEB_DIR/usr/lib/vst3/"
+fi
+
+if [ -e "artifacts/LayerEngine.clap" ]; then
+    cp -r "artifacts/LayerEngine.clap" "$DEB_DIR/usr/lib/clap/"
 fi
 
 # Copy logo as application icon

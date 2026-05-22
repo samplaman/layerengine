@@ -12,6 +12,14 @@ FetchContent_Declare(
 )
 FetchContent_MakeAvailable(JUCE)
 
+if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
+    set(PLUGIN_FORMATS VST3 Standalone CLAP)
+elseif(CMAKE_SYSTEM_NAME STREQUAL "Darwin")
+    set(PLUGIN_FORMATS AU VST3 Standalone)
+else()
+    set(PLUGIN_FORMATS VST3 Standalone)
+endif()
+
 juce_add_plugin(LayerEngine
     COMPANY_NAME "Eoin O Dowd"
     BUNDLE_ID "com.eoinodowd.layerengine"
@@ -22,7 +30,7 @@ juce_add_plugin(LayerEngine
     EDITOR_WANTS_KEYBOARD_FOCUS TRUE
     COPY_PLUGIN_AFTER_BUILD FALSE
     PLUGIN_CODE "GRAN"
-    FORMATS AU VST3 Standalone
+    FORMATS ${PLUGIN_FORMATS}
     ICON_BIG assets/icon.png
     ICON_SMALL assets/icon.png
 )
