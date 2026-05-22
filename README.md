@@ -43,6 +43,12 @@
 - **Visual Feedback**: Real-time grain visualization and sample waveform display.
 - **Modern UI**: High-contrast, premium glassmorphism interface featuring a tabbed navbar next to the logo, borderless circular About button, and dynamic visual styling.
 
+## 🎧 Supported Formats
+
+- **macOS**: VST3, Audio Unit (AU), Standalone App
+- **Windows**: VST3, Standalone App (.exe installer)
+- **Linux**: VST3, Standalone App (universal script & `.deb`), CLAP (available as a separate release asset)
+
 ## 🛠 Tech Stack
 
 - **Core**: C++17
