@@ -85,7 +85,6 @@ jobs:
             mkdir -p universal
             cp artifacts/LayerEngine universal/
             cp -r artifacts/LayerEngine.vst3 universal/
-            if [ -e "artifacts/LayerEngine.clap" ]; then cp -r artifacts/LayerEngine.clap universal/; fi
             cp assets/logo.png universal/
             cp install.sh universal/
             
@@ -98,6 +97,14 @@ jobs:
             # universal zip
             cd universal && zip -r ../LayerEngine-Linux-Universal.zip .
             cd ..
+
+            # clap zip
+            if [ -e "artifacts/LayerEngine.clap" ]; then
+              mkdir -p clap_zip
+              cp -r artifacts/LayerEngine.clap clap_zip/
+              cd clap_zip && zip -r ../LayerEngine-Linux-CLAP.zip .
+              cd ..
+            fi
           fi
 
       - name: Install NSIS (Windows)
@@ -179,6 +186,7 @@ jobs:
           files: |
             LayerEngine-Linux/LayerEngine-Linux-Universal.zip
             LayerEngine-Linux/LayerEngine-Linux-Debian.zip
+            LayerEngine-Linux/LayerEngine-Linux-CLAP.zip
             LayerEngine-macOS/LayerEngine-macOS.zip
             LayerEngine-Windows/LayerEngine-Windows.zip
           draft: false

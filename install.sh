@@ -12,7 +12,6 @@ if [ "$EUID" -ne 0 ]; then
   echo "Installing for current user only..."
   INSTALL_BIN="$HOME/.local/bin"
   INSTALL_VST3="$HOME/.vst3"
-  INSTALL_CLAP="$HOME/.clap"
   INSTALL_DESKTOP="$HOME/.local/share/applications"
   INSTALL_ICON="$HOME/.local/share/icons/hicolor/scalable/apps"
 else
@@ -20,14 +19,12 @@ else
   echo "Installing system-wide..."
   INSTALL_BIN="/usr/local/bin"
   INSTALL_VST3="/usr/lib/vst3"
-  INSTALL_CLAP="/usr/lib/clap"
   INSTALL_DESKTOP="/usr/share/applications"
   INSTALL_ICON="/usr/share/pixmaps"
 fi
 
 mkdir -p "$INSTALL_BIN"
 mkdir -p "$INSTALL_VST3"
-mkdir -p "$INSTALL_CLAP"
 mkdir -p "$INSTALL_DESKTOP"
 mkdir -p "$INSTALL_ICON"
 
@@ -47,15 +44,6 @@ if [ -d "LayerEngine.vst3" ]; then
   echo "✓ VST3 plugin installed to: $INSTALL_VST3/LayerEngine.vst3"
 else
   echo "⚠ VST3 plugin not found in current folder."
-fi
-
-# Copy CLAP
-if [ -e "LayerEngine.clap" ]; then
-  rm -rf "$INSTALL_CLAP/LayerEngine.clap"
-  cp -r "LayerEngine.clap" "$INSTALL_CLAP/"
-  echo "✓ CLAP plugin installed to: $INSTALL_CLAP/LayerEngine.clap"
-else
-  echo "⚠ CLAP plugin not found in current folder."
 fi
 
 # Copy Icon
