@@ -127,23 +127,27 @@ void GranularSynthAudioProcessor::processBlock(juce::AudioBuffer<float> &buffer,
     phaser.process(context);
 
   if (!fxParams.delayBypass && fxParams.delayMix > 0.01f) {
-    float delayInSamples = juce::jmax(0.1f, fxParams.delayTime * (float)getSampleRate() / 1000.0f);
+    float delayInSamples =
+        juce::jmax(0.1f, fxParams.delayTime * (float)getSampleRate() / 1000.0f);
     for (size_t channel = 0; channel < block.getNumChannels(); ++channel) {
-        auto* channelData = block.getChannelPointer(channel);
-        for (size_t i = 0; i < block.getNumSamples(); ++i) {
-            float input = channelData[i];
-            float delayed = delay.popSample((int)channel, delayInSamples);
-            delay.pushSample((int)channel, input + delayed * fxParams.delayFeedback);
-            channelData[i] = input * (1.0f - fxParams.delayMix) + delayed * fxParams.delayMix;
-        }
+      auto *channelData = block.getChannelPointer(channel);
+      for (size_t i = 0; i < block.getNumSamples(); ++i) {
+        float input = channelData[i];
+        float delayed = delay.popSample((int)channel, delayInSamples);
+        delay.pushSample((int)channel,
+                         input + delayed * fxParams.delayFeedback);
+        channelData[i] =
+            input * (1.0f - fxParams.delayMix) + delayed * fxParams.delayMix;
+      }
     }
   } else {
     for (size_t channel = 0; channel < block.getNumChannels(); ++channel) {
-        auto* channelData = block.getChannelPointer(channel);
-        for (size_t i = 0; i < block.getNumSamples(); ++i) {
-            delay.pushSample((int)channel, channelData[i]); // Keep delay buffer warm
-            delay.popSample((int)channel, 0.1f);
-        }
+      auto *channelData = block.getChannelPointer(channel);
+      for (size_t i = 0; i < block.getNumSamples(); ++i) {
+        delay.pushSample((int)channel,
+                         channelData[i]); // Keep delay buffer warm
+        delay.popSample((int)channel, 0.1f);
+      }
     }
   }
 
@@ -268,8 +272,8 @@ void GranularSynthAudioProcessor::setStateInformation(const void *data,
       fxParams.chorusBypass =
           xmlGlobal->getBoolAttribute("chorusBypass", fxParams.chorusBypass);
 
-      fxParams.delayTime = (float)xmlGlobal->getDoubleAttribute(
-          "delayTime", fxParams.delayTime);
+      fxParams.delayTime =
+          (float)xmlGlobal->getDoubleAttribute("delayTime", fxParams.delayTime);
       fxParams.delayFeedback = (float)xmlGlobal->getDoubleAttribute(
           "delayFeedback", fxParams.delayFeedback);
       fxParams.delayMix =

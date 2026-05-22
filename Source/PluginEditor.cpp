@@ -79,12 +79,18 @@ GranularSynthAudioProcessorEditor::GranularSynthAudioProcessorEditor(
   };
 
   pitchLabel.setText("PITCH", juce::dontSendNotification);
-  pitchLabel.setFont(juce::FontOptions(10.0f).withStyle("Bold"));
+  pitchLabel.setFont(juce::FontOptions(11.0f).withStyle("Bold"));
+  pitchLabel.setColour(juce::Label::textColourId, juce::Colours::white);
+  pitchLabel.setColour(juce::Label::backgroundColourId,
+                       juce::Colours::black.withAlpha(0.25f));
   pitchLabel.setJustificationType(juce::Justification::centred);
   addAndMakeVisible(pitchLabel);
 
   modLabel.setText("MOD", juce::dontSendNotification);
-  modLabel.setFont(juce::FontOptions(10.0f).withStyle("Bold"));
+  modLabel.setFont(juce::FontOptions(11.0f).withStyle("Bold"));
+  modLabel.setColour(juce::Label::textColourId, juce::Colours::white);
+  modLabel.setColour(juce::Label::backgroundColourId,
+                     juce::Colours::black.withAlpha(0.25f));
   modLabel.setJustificationType(juce::Justification::centred);
   addAndMakeVisible(modLabel);
 

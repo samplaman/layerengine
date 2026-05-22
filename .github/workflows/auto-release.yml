@@ -85,10 +85,15 @@ jobs:
             cp assets/logo.png universal/
             cp install.sh universal/
             
-            mkdir -p final_zip
-            cp LayerEngine-Installer.deb final_zip/
-            cd universal && zip -r ../final_zip/LayerEngine-Linux-Universal.zip .
-            cd ../final_zip && zip -r ../LayerEngine-Linux.zip .
+            # deb zip
+            mkdir -p deb_zip
+            cp LayerEngine-Installer.deb deb_zip/
+            cd deb_zip && zip -r ../LayerEngine-Linux-Debian.zip .
+            cd ..
+            
+            # universal zip
+            cd universal && zip -r ../LayerEngine-Linux-Universal.zip .
+            cd ..
           fi
 
       - name: Install NSIS (Windows)
@@ -122,7 +127,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: LayerEngine-${{ matrix.platform }}
-          path: LayerEngine-${{ matrix.platform }}.zip
+          path: LayerEngine-*.zip
 
   release:
     name: Create Release
@@ -168,7 +173,8 @@ jobs:
           target_commitish: ${{ github.sha }}
           name: LayerEngine ${{ env.TAG_NAME }}
           files: |
-            LayerEngine-Linux/LayerEngine-Linux.zip
+            LayerEngine-Linux/LayerEngine-Linux-Universal.zip
+            LayerEngine-Linux/LayerEngine-Linux-Debian.zip
             LayerEngine-macOS/LayerEngine-macOS.zip
             LayerEngine-Windows/LayerEngine-Windows.zip
           draft: false

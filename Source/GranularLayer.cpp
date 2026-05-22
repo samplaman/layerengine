@@ -194,8 +194,7 @@ void GranularLayer::processBlock(juce::AudioBuffer<float> &buffer,
 
   // Update playhead (Scanning)
   if (params.scanSpeed != 0.0f) {
-    playhead +=
-        (params.scanSpeed / (float)currentSampleRate) * numSamples;
+    playhead += (params.scanSpeed / (float)currentSampleRate) * numSamples;
     while (playhead > 1.0f)
       playhead -= 1.0f;
     while (playhead < 0.0f)
