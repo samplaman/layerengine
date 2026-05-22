@@ -98,12 +98,9 @@ jobs:
             cd universal && zip -r ../LayerEngine-Linux-Universal.zip .
             cd ..
 
-            # clap zip
+            # clap direct asset
             if [ -e "artifacts/LayerEngine.clap" ]; then
-              mkdir -p clap_zip
-              cp -r artifacts/LayerEngine.clap clap_zip/
-              cd clap_zip && zip -r ../LayerEngine-Linux-CLAP.zip .
-              cd ..
+              cp -r artifacts/LayerEngine.clap LayerEngine-Linux.clap
             fi
           fi
 
@@ -138,7 +135,9 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: LayerEngine-${{ matrix.platform }}
-          path: LayerEngine-*.zip
+          path: |
+            LayerEngine-*.zip
+            LayerEngine-*.clap
 
   release:
     name: Create Release
@@ -186,7 +185,7 @@ jobs:
           files: |
             LayerEngine-Linux/LayerEngine-Linux-Universal.zip
             LayerEngine-Linux/LayerEngine-Linux-Debian.zip
-            LayerEngine-Linux/LayerEngine-Linux-CLAP.zip
+            LayerEngine-Linux/LayerEngine-Linux.clap
             LayerEngine-macOS/LayerEngine-macOS.zip
             LayerEngine-Windows/LayerEngine-Windows.zip
           draft: false
