@@ -13,7 +13,7 @@ FetchContent_Declare(
 FetchContent_MakeAvailable(JUCE)
 
 if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
-    set(PLUGIN_FORMATS VST3 Standalone CLAP)
+    set(PLUGIN_FORMATS ${PLUGIN_FORMATS})
 elseif(CMAKE_SYSTEM_NAME STREQUAL "Darwin")
     set(PLUGIN_FORMATS AU VST3 Standalone)
 else()

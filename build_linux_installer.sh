@@ -31,8 +31,8 @@ if [ -d "artifacts/LayerEngine.vst3" ]; then
 fi
 
 # Copy logo as application icon
-if [ -f "assets/logo.png" ]; then
-    cp "assets/logo.png" "$DEB_DIR/usr/share/pixmaps/layerengine.png"
+if [ -f "assets/icon.png" ]; then
+    cp "assets/icon.png" "$DEB_DIR/usr/share/pixmaps/layerengine.png"
 fi
 
 # Create desktop entry for standalone app
