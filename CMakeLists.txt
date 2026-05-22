@@ -23,6 +23,8 @@ juce_add_plugin(LayerEngine
     COPY_PLUGIN_AFTER_BUILD FALSE
     PLUGIN_CODE "GRAN"
     FORMATS AU VST3 Standalone
+    ICON_BIG assets/icon.png
+    ICON_SMALL assets/icon.png
 )
 
 juce_add_binary_data(Assets
