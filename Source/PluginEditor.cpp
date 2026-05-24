@@ -21,6 +21,9 @@ GranularSynthAudioProcessorEditor::GranularSynthAudioProcessorEditor(
   auto *mixerUI = new MixerUI(audioProcessor);
   tabs.addTab("MIXER", juce::Colours::transparentBlack, mixerUI, true);
 
+  auto *xyPadUI = new XYPadUI(audioProcessor);
+  tabs.addTab("XY", juce::Colours::transparentBlack, xyPadUI, true);
+
   auto *fxUI = new EffectsUI(audioProcessor);
   tabs.addTab("FX", juce::Colours::transparentBlack, fxUI, true);
 

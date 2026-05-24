@@ -1626,6 +1626,126 @@ private:
   float visualLevels[4] = {0.0f, 0.0f, 0.0f, 0.0f};
 };
 
+class XYPadComponent : public juce::Component {
+public:
+  XYPadComponent(GranularSynthAudioProcessor& p) : audioProcessor(p) {}
+
+  void paint(juce::Graphics& g) override {
+    auto bounds = getLocalBounds().toFloat();
+    
+    // Background
+    g.setColour(juce::Colours::black.withAlpha(0.2f));
+    g.fillRoundedRectangle(bounds, 10.0f);
+    
+    g.setColour(juce::Colours::white.withAlpha(0.2f));
+    g.drawRoundedRectangle(bounds, 10.0f, 2.0f);
+    
+    // Crosshairs
+    g.setColour(juce::Colours::white.withAlpha(0.1f));
+    g.drawLine(bounds.getCentreX(), bounds.getY(), bounds.getCentreX(), bounds.getBottom(), 2.0f);
+    g.drawLine(bounds.getX(), bounds.getCentreY(), bounds.getRight(), bounds.getCentreY(), 2.0f);
+    
+    // Labels
+    g.setColour(juce::Colours::white.withAlpha(0.5f));
+    g.setFont(juce::FontOptions(18.0f).withStyle("Bold"));
+    g.drawText("1", juce::Rectangle<float>(bounds.getX() + 15, bounds.getY() + 15, 30, 30), juce::Justification::centred);
+    g.drawText("2", juce::Rectangle<float>(bounds.getRight() - 45, bounds.getY() + 15, 30, 30), juce::Justification::centred);
+    g.drawText("3", juce::Rectangle<float>(bounds.getX() + 15, bounds.getBottom() - 45, 30, 30), juce::Justification::centred);
+    g.drawText("4", juce::Rectangle<float>(bounds.getRight() - 45, bounds.getBottom() - 45, 30, 30), juce::Justification::centred);
+
+    // Draw the puck
+    float x = 0.5f;
+    float y = 0.5f;
+    
+    float v1 = audioProcessor.getLayer(0).getParams().volume;
+    float v2 = audioProcessor.getLayer(1).getParams().volume;
+    float v3 = audioProcessor.getLayer(2).getParams().volume;
+    float v4 = audioProcessor.getLayer(3).getParams().volume;
+    
+    float total = v1 + v2 + v3 + v4;
+    if (total > 0.0f) {
+      x = (v2 + v4) / total;
+      y = (v3 + v4) / total;
+    }
+    
+    float puckX = bounds.getX() + x * bounds.getWidth();
+    float puckY = bounds.getY() + y * bounds.getHeight();
+    
+    juce::Rectangle<float> puck(puckX - 15.0f, puckY - 15.0f, 30.0f, 30.0f);
+    
+    g.setColour(juce::Colour(9, 136, 131).withAlpha(0.85f));
+    g.fillEllipse(puck);
+    
+    g.setColour(juce::Colours::white);
+    g.drawEllipse(puck, 2.0f);
+    
+    // Inner glowing dot
+    g.setColour(juce::Colours::white.withAlpha(0.8f));
+    g.fillEllipse(puck.reduced(10.0f));
+  }
+
+  void mouseDown(const juce::MouseEvent& e) override {
+    updateVolumes(e.position);
+  }
+  
+  void mouseDrag(const juce::MouseEvent& e) override {
+    updateVolumes(e.position);
+  }
+
+private:
+  void updateVolumes(juce::Point<float> pos) {
+    auto bounds = getLocalBounds().toFloat();
+    float x = juce::jlimit(0.0f, 1.0f, (pos.x - bounds.getX()) / bounds.getWidth());
+    float y = juce::jlimit(0.0f, 1.0f, (pos.y - bounds.getY()) / bounds.getHeight());
+    
+    float v1 = (1.0f - x) * (1.0f - y);
+    float v2 = x * (1.0f - y);
+    float v3 = (1.0f - x) * y;
+    float v4 = x * y;
+    
+    audioProcessor.getLayer(0).getParams().volume = v1;
+    audioProcessor.getLayer(1).getParams().volume = v2;
+    audioProcessor.getLayer(2).getParams().volume = v3;
+    audioProcessor.getLayer(3).getParams().volume = v4;
+    
+    repaint();
+  }
+
+  GranularSynthAudioProcessor& audioProcessor;
+};
+
+class XYPadUI : public juce::Component, public juce::Timer {
+public:
+  XYPadUI(GranularSynthAudioProcessor& p) : xyPad(p) {
+    addAndMakeVisible(xyPad);
+    startTimerHz(30);
+  }
+  
+  void timerCallback() override {
+    if (!xyPad.isMouseButtonDown()) {
+      xyPad.repaint();
+    }
+  }
+
+  void paint(juce::Graphics& g) override {
+    auto area = getLocalBounds().toFloat().reduced(10);
+    juce::ColourGradient bgGrad(
+        juce::Colours::white.withAlpha(0.4f), area.getTopLeft(),
+        juce::Colours::white.withAlpha(0.15f), area.getBottomRight(), false);
+    g.setGradientFill(bgGrad);
+    g.fillRoundedRectangle(area, 10.0f);
+    g.setColour(juce::Colours::white);
+    g.drawRoundedRectangle(area, 10.0f, 1.5f);
+  }
+  
+  void resized() override {
+    xyPad.setBounds(getLocalBounds().reduced(50));
+  }
+
+private:
+  XYPadComponent xyPad;
+};
+
 class CustomTabbedComponent : public juce::TabbedComponent {
 public:
   CustomTabbedComponent(juce::TabbedButtonBar::Orientation orientation)
