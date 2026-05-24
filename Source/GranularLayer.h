@@ -37,6 +37,10 @@ struct GranularParams {
   float filterCutoff = 20000.0f;
   float filterResonance = 0.7f;
 
+  // Note Range
+  int lowNote = 0;
+  int highNote = 127;
+
   // Mute / Solo
   bool isMuted = false;
   bool isSoloed = false;

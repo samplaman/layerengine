@@ -1,0 +1,48 @@
+{
+  "Name": "LayerEngine",
+  "Version": "0.0.1",
+  "Factory Info": {
+    "Vendor": "Eoin O Dowd",
+    "URL": "",
+    "E-Mail": "",
+    "Flags": {
+      "Unicode": true,
+      "Classes Discardable": false,
+      "Component Non Discardable": false,
+    },
+  },
+  "Classes": [
+    {
+      "CID": "ABCDEF019182FAEB4D616E754752414E",
+      "Category": "Audio Module Class",
+      "Name": "LayerEngine",
+      "Vendor": "Eoin O Dowd",
+      "Version": "0.0.1",
+      "SDKVersion": "VST 3.8.0",
+      "Sub Categories": [
+        "Instrument",
+        "Synth",
+      ],
+      "Class Flags": 2,
+      "Cardinality": 2147483647,
+      "Snapshots": [
+      ],
+    },
+    {
+      "CID": "ABCDEF011234ABCD4D616E754752414E",
+      "Category": "Component Controller Class",
+      "Name": "LayerEngine",
+      "Vendor": "Eoin O Dowd",
+      "Version": "0.0.1",
+      "SDKVersion": "VST 3.8.0",
+      "Sub Categories": [
+        "Instrument",
+        "Synth",
+      ],
+      "Class Flags": 2,
+      "Cardinality": 2147483647,
+      "Snapshots": [
+      ],
+    },
+  ],
+}

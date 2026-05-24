@@ -230,6 +230,9 @@ void GranularSynthAudioProcessor::getStateInformation(
     xmlLayer->setAttribute("filterCutoff", p.filterCutoff);
     xmlLayer->setAttribute("filterResonance", p.filterResonance);
 
+    xmlLayer->setAttribute("lowNote", p.lowNote);
+    xmlLayer->setAttribute("highNote", p.highNote);
+
     xmlLayer->setAttribute("isMuted", p.isMuted);
     xmlLayer->setAttribute("isSoloed", p.isSoloed);
   }
@@ -349,6 +352,9 @@ void GranularSynthAudioProcessor::setStateInformation(const void *data,
           p.filterResonance = (float)xmlLayer->getDoubleAttribute(
               "filterResonance", p.filterResonance);
 
+          p.lowNote = xmlLayer->getIntAttribute("lowNote", p.lowNote);
+          p.highNote = xmlLayer->getIntAttribute("highNote", p.highNote);
+
           p.isMuted = xmlLayer->getBoolAttribute("isMuted", p.isMuted);
           p.isSoloed = xmlLayer->getBoolAttribute("isSoloed", p.isSoloed);
 
@@ -461,6 +467,10 @@ float GranularSynthAudioProcessor::getParameterValue(
           return p.sustain;
         if (name == "release")
           return p.release;
+        if (name == "lowNote")
+          return (float)p.lowNote;
+        if (name == "highNote")
+          return (float)p.highNote;
       }
     }
   } else if (paramId.startsWith("global/")) {
@@ -546,6 +556,10 @@ void GranularSynthAudioProcessor::setParameterValue(const juce::String &paramId,
           p.sustain = val;
         else if (name == "release")
           p.release = val;
+        else if (name == "lowNote")
+          p.lowNote = (int)val;
+        else if (name == "highNote")
+          p.highNote = (int)val;
       }
     }
   } else if (paramId.startsWith("global/")) {
@@ -625,6 +639,9 @@ float GranularSynthAudioProcessor::mapCCValueToParam(
   }
   if (paramId.endsWith("/release")) {
     return juce::jmap(ccNormalized, 0.01f, 5.0f);
+  }
+  if (paramId.endsWith("/lowNote") || paramId.endsWith("/highNote")) {
+    return juce::jmap(ccNormalized, 0.0f, 127.0f);
   }
   if (paramId.endsWith("chorusRate")) {
     return juce::jmap(ccNormalized, 0.1f, 10.0f);

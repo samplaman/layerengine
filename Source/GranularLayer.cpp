@@ -56,9 +56,11 @@ void GranularLayer::handleMidi(juce::MidiBuffer &midiMessages) {
   for (const auto metadata : midiMessages) {
     auto msg = metadata.getMessage();
     if (msg.isNoteOn()) {
-      activeNoteNumbers.insert(msg.getNoteNumber());
-      lastNoteNumber = msg.getNoteNumber();
-      adsr.noteOn();
+      if (msg.getNoteNumber() >= params.lowNote && msg.getNoteNumber() <= params.highNote) {
+        activeNoteNumbers.insert(msg.getNoteNumber());
+        lastNoteNumber = msg.getNoteNumber();
+        adsr.noteOn();
+      }
     } else if (msg.isNoteOff()) {
       activeNoteNumbers.erase(msg.getNoteNumber());
       if (activeNoteNumbers.empty())

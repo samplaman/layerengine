@@ -297,16 +297,28 @@ public:
                  juce::MidiKeyboardComponent::Orientation orientation)
       : juce::MidiKeyboardComponent(state, orientation) {}
 
+  std::function<std::pair<int, int>()> getActiveNoteRange;
+
   void drawWhiteNote(int midiNoteNumber, juce::Graphics &g,
                      juce::Rectangle<float> area, bool isDown, bool isOver,
                      juce::Colour lineColour,
                      juce::Colour textColour) override {
     auto accent = juce::Colour(9, 136, 131);
 
+    bool inRange = true;
+    if (getActiveNoteRange) {
+      auto range = getActiveNoteRange();
+      inRange = (midiNoteNumber >= range.first && midiNoteNumber <= range.second);
+    }
+
     juce::Colour fillColour =
         isDown ? accent.withAlpha(0.7f)
                : (isOver ? juce::Colours::white.withAlpha(0.45f)
                          : juce::Colours::white.withAlpha(0.25f));
+
+    if (!inRange) {
+      fillColour = fillColour.withMultipliedAlpha(0.3f);
+    }
 
     auto keyArea = area.reduced(0.5f, 0.0f);
 
@@ -333,10 +345,20 @@ public:
                      juce::Colour noteFillColour) override {
     auto accent = juce::Colour(9, 136, 131);
 
+    bool inRange = true;
+    if (getActiveNoteRange) {
+      auto range = getActiveNoteRange();
+      inRange = (midiNoteNumber >= range.first && midiNoteNumber <= range.second);
+    }
+
     juce::Colour fillColour =
         isDown ? accent.withAlpha(0.8f)
                : (isOver ? juce::Colours::black.withAlpha(0.7f)
                          : juce::Colours::black.withAlpha(0.4f));
+
+    if (!inRange) {
+      fillColour = fillColour.withMultipliedAlpha(0.3f);
+    }
 
     auto keyArea =
         area.reduced(1.5f, 0.0f).withTrimmedBottom(isDown ? 1.0f : 2.0f);
@@ -399,6 +421,78 @@ public:
       float posIdx = layer.getPlayhead() * getWidth();
       g.drawVerticalLine((int)posIdx, 2.0f, (float)getHeight() - 2.0f);
     }
+  }
+
+private:
+  GranularLayer &layer;
+};
+
+class EnvelopeVisualizer : public juce::Component, public juce::Timer {
+public:
+  EnvelopeVisualizer(GranularLayer &l) : layer(l) { startTimerHz(30); }
+
+  void timerCallback() override { repaint(); }
+
+  void paint(juce::Graphics &g) override {
+    auto bounds = getLocalBounds().toFloat();
+
+    auto &p = layer.getParams();
+
+    // Map ADSR to x/y coordinates
+    float totalTime = p.attack + p.decay + p.release + 1.0f; // 1.0s for sustain phase visual width
+    if (totalTime < 0.1f)
+      totalTime = 0.1f;
+
+    float w = bounds.getWidth() - 30.0f;
+    float h = bounds.getHeight() - 30.0f;
+    float startX = 15.0f;
+    float bottomY = bounds.getBottom() - 15.0f;
+    float topY = bounds.getY() + 15.0f;
+
+    float aX = startX + (p.attack / totalTime) * w;
+    float dX = aX + (p.decay / totalTime) * w;
+    float sX = dX + (1.0f / totalTime) * w; // Fixed visual width for sustain
+    float rX = sX + (p.release / totalTime) * w;
+
+    float sY = bottomY - p.sustain * h;
+
+    juce::Path envPath;
+    envPath.startNewSubPath(startX, bottomY); // Start
+    envPath.lineTo(aX, topY);                 // Attack
+    envPath.lineTo(dX, sY);                   // Decay
+    envPath.lineTo(sX, sY);                   // Sustain
+    envPath.lineTo(rX, bottomY);              // Release
+
+    // Fill the path
+    juce::Path filledPath = envPath;
+    filledPath.lineTo(startX, bottomY);
+    filledPath.closeSubPath();
+
+    // Gradient fill
+    juce::Colour accent(9, 136, 131);
+    juce::ColourGradient grad(accent.withAlpha(0.6f), 0, topY,
+                              accent.withAlpha(0.0f), 0, bottomY, false);
+    g.setGradientFill(grad);
+    g.fillPath(filledPath);
+
+    // Stroke
+    g.setColour(accent.brighter(0.2f));
+    g.strokePath(envPath, juce::PathStrokeType(2.5f, juce::PathStrokeType::curved, juce::PathStrokeType::rounded));
+
+    // Draw small circles at nodes
+    g.setColour(juce::Colours::white);
+    float radius = 3.5f;
+    g.fillEllipse(startX - radius, bottomY - radius, radius * 2, radius * 2);
+    g.fillEllipse(aX - radius, topY - radius, radius * 2, radius * 2);
+    g.fillEllipse(dX - radius, sY - radius, radius * 2, radius * 2);
+    g.fillEllipse(sX - radius, sY - radius, radius * 2, radius * 2);
+    g.fillEllipse(rX - radius, bottomY - radius, radius * 2, radius * 2);
+
+    // Label
+    g.setColour(juce::Colours::white.withAlpha(0.6f));
+    g.setFont(juce::FontOptions(11.0f).withStyle("Bold"));
+    g.drawText("ADSR", bounds.withTrimmedTop(8).withTrimmedRight(10),
+               juce::Justification::topRight);
   }
 
 private:
@@ -496,7 +590,7 @@ class LayerUI : public juce::Component,
 public:
   LayerUI(GranularSynthAudioProcessor &p, int layerIdx)
       : audioProcessor(p), layerIndex(layerIdx), layer(p.getLayer(layerIdx)),
-        viewer(p.getLayer(layerIdx)) {
+        viewer(p.getLayer(layerIdx)), envVisualizer(p.getLayer(layerIdx)) {
 
     posSlider.init("layer/" + juce::String(layerIndex) + "/position",
                    audioProcessor);
@@ -531,6 +625,9 @@ public:
     resSlider.init("layer/" + juce::String(layerIndex) + "/filterResonance",
                    audioProcessor);
 
+    lowNoteSlider.init("layer/" + juce::String(layerIndex) + "/lowNote", audioProcessor);
+    highNoteSlider.init("layer/" + juce::String(layerIndex) + "/highNote", audioProcessor);
+
     atkSlider.init("layer/" + juce::String(layerIndex) + "/attack",
                    audioProcessor);
     decSlider.init("layer/" + juce::String(layerIndex) + "/decay",
@@ -541,6 +638,7 @@ public:
                    audioProcessor);
 
     addAndMakeVisible(viewer);
+    addAndMakeVisible(envVisualizer);
 
     addAndMakeVisible(loadButton);
     loadButton.setButtonText("IMPORT AUDIO");
@@ -617,6 +715,11 @@ public:
     setupSlider(resSlider, "RES", 0.1f, 1.0f, layer.getParams().filterResonance,
                 dp.filterResonance, true);
 
+    setupSlider(lowNoteSlider, "KEY LO", 0.0f, 127.0f, layer.getParams().lowNote,
+                0.0f, true);
+    setupSlider(highNoteSlider, "KEY HI", 0.0f, 127.0f, layer.getParams().highNote,
+                127.0f, true);
+
     setupSlider(atkSlider, "A", 0.01f, 2.0f, layer.getParams().attack,
                 dp.attack);
     setupSlider(decSlider, "D", 0.01f, 2.0f, layer.getParams().decay, dp.decay);
@@ -674,6 +777,13 @@ public:
     };
     resSlider.onValueChange = [this] {
       this->layer.getParams().filterResonance = (float)resSlider.getValue();
+    };
+
+    lowNoteSlider.onValueChange = [this] {
+      this->layer.getParams().lowNote = (int)lowNoteSlider.getValue();
+    };
+    highNoteSlider.onValueChange = [this] {
+      this->layer.getParams().highNote = (int)highNoteSlider.getValue();
     };
 
     atkSlider.onValueChange = [this] {
@@ -771,6 +881,13 @@ public:
       resSlider.setValue(layer.getParams().filterResonance,
                          juce::dontSendNotification);
 
+    if (!lowNoteSlider.isMouseButtonDown())
+      lowNoteSlider.setValue(layer.getParams().lowNote,
+                             juce::dontSendNotification);
+    if (!highNoteSlider.isMouseButtonDown())
+      highNoteSlider.setValue(layer.getParams().highNote,
+                              juce::dontSendNotification);
+
     if (!atkSlider.isMouseButtonDown())
       atkSlider.setValue(layer.getParams().attack, juce::dontSendNotification);
     if (!decSlider.isMouseButtonDown())
@@ -831,41 +948,49 @@ public:
     area.removeFromTop(10);
 
     auto granArea = area.removeFromTop(160);
+    int colW = granArea.getWidth() / 8;
+
+    auto envGraphicArea = granArea.removeFromRight(colW * 2).reduced(6);
+    envVisualizer.setBounds(envGraphicArea);
 
     auto coreRow = granArea.removeFromTop(granArea.getHeight() / 2);
-    int coreW = coreRow.getWidth() / 6;
-    posSlider.setBounds(coreRow.removeFromLeft(coreW).reduced(6));
-    sizeSlider.setBounds(coreRow.removeFromLeft(coreW).reduced(6));
-    densSlider.setBounds(coreRow.removeFromLeft(coreW).reduced(6));
-    pitchSlider.setBounds(coreRow.removeFromLeft(coreW).reduced(6));
-    panSlider.setBounds(coreRow.removeFromLeft(coreW).reduced(6));
-    spreadSlider.setBounds(coreRow.removeFromLeft(coreW).reduced(6));
+    posSlider.setBounds(coreRow.removeFromLeft(colW).reduced(6));
+    sizeSlider.setBounds(coreRow.removeFromLeft(colW).reduced(6));
+    densSlider.setBounds(coreRow.removeFromLeft(colW).reduced(6));
+    pitchSlider.setBounds(coreRow.removeFromLeft(colW).reduced(6));
+    panSlider.setBounds(coreRow.removeFromLeft(colW).reduced(6));
+    spreadSlider.setBounds(coreRow.removeFromLeft(colW).reduced(6));
 
     auto jitterRow = granArea;
-    int jitW = jitterRow.getWidth() / 6;
-    posRandSlider.setBounds(jitterRow.removeFromLeft(jitW).reduced(6));
-    pitchRandSlider.setBounds(jitterRow.removeFromLeft(jitW).reduced(6));
-    sizeRandSlider.setBounds(jitterRow.removeFromLeft(jitW).reduced(6));
-    scanSpeedSlider.setBounds(jitterRow.removeFromLeft(jitW).reduced(6));
-    revProbSlider.setBounds(jitterRow.removeFromLeft(jitW).reduced(6));
-    windowShapeCombo.setBounds(jitterRow.removeFromLeft(jitW).reduced(12, 20));
+    posRandSlider.setBounds(jitterRow.removeFromLeft(colW).reduced(6));
+    pitchRandSlider.setBounds(jitterRow.removeFromLeft(colW).reduced(6));
+    sizeRandSlider.setBounds(jitterRow.removeFromLeft(colW).reduced(6));
+    scanSpeedSlider.setBounds(jitterRow.removeFromLeft(colW).reduced(6));
+    revProbSlider.setBounds(jitterRow.removeFromLeft(colW).reduced(6));
+    windowShapeCombo.setBounds(jitterRow.removeFromLeft(colW).reduced(12, 20));
 
     area.removeFromTop(10);
 
     auto bottomRow = area.removeFromTop(120);
-    int bottomW = bottomRow.getWidth() / 6;
 
-    auto filter1Area = bottomRow.removeFromLeft(bottomW);
+    auto filter1Area = bottomRow.removeFromLeft(colW);
     cutoffSlider.setBounds(
-        filter1Area.withSizeKeepingCentre(bottomW, 80).reduced(6));
+        filter1Area.withSizeKeepingCentre(colW, 80).reduced(6));
 
-    auto filter2Area = bottomRow.removeFromLeft(bottomW);
+    auto filter2Area = bottomRow.removeFromLeft(colW);
     resSlider.setBounds(
-        filter2Area.withSizeKeepingCentre(bottomW, 80).reduced(6));
-    atkSlider.setBounds(bottomRow.removeFromLeft(bottomW).reduced(6));
-    decSlider.setBounds(bottomRow.removeFromLeft(bottomW).reduced(6));
-    susSlider.setBounds(bottomRow.removeFromLeft(bottomW).reduced(6));
-    relSlider.setBounds(bottomRow.removeFromLeft(bottomW).reduced(6));
+        filter2Area.withSizeKeepingCentre(colW, 80).reduced(6));
+
+    auto lowNoteArea = bottomRow.removeFromLeft(colW);
+    lowNoteSlider.setBounds(lowNoteArea.withSizeKeepingCentre(colW, 80).reduced(6));
+
+    auto highNoteArea = bottomRow.removeFromLeft(colW);
+    highNoteSlider.setBounds(highNoteArea.withSizeKeepingCentre(colW, 80).reduced(6));
+
+    atkSlider.setBounds(bottomRow.removeFromLeft(colW).reduced(6));
+    decSlider.setBounds(bottomRow.removeFromLeft(colW).reduced(6));
+    susSlider.setBounds(bottomRow.removeFromLeft(colW).reduced(6));
+    relSlider.setBounds(bottomRow.removeFromLeft(colW).reduced(6));
 
     for (auto &pair : sliderLabels) {
       auto sb = pair.first->getBounds();
@@ -906,6 +1031,7 @@ private:
   int layerIndex;
   GranularLayer &layer;
   WaveformViewer viewer;
+  EnvelopeVisualizer envVisualizer;
   juce::TextButton loadButton;
   juce::TextButton clearButton;
   juce::Label sampleNameLabel;
@@ -917,6 +1043,7 @@ private:
   juce::ComboBox windowShapeCombo;
   MappedSlider atkSlider, decSlider, susSlider, relSlider;
   MappedSlider cutoffSlider, resSlider;
+  MappedSlider lowNoteSlider, highNoteSlider;
   juce::OwnedArray<juce::Label> labels;
   std::map<juce::Slider *, juce::Label *> sliderLabels;
   std::unique_ptr<juce::FileChooser> chooser;

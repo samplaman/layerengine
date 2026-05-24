@@ -27,6 +27,15 @@ GranularSynthAudioProcessorEditor::GranularSynthAudioProcessorEditor(
   auto *fxUI = new EffectsUI(audioProcessor);
   tabs.addTab("FX", juce::Colours::transparentBlack, fxUI, true);
 
+  keyboard.getActiveNoteRange = [this]() -> std::pair<int, int> {
+    int tab = tabs.getCurrentTabIndex();
+    if (tab >= 0 && tab < 4) {
+      auto& p = audioProcessor.getLayer(tab).getParams();
+      return { p.lowNote, p.highNote };
+    }
+    return { 0, 127 };
+  };
+
   addAndMakeVisible(tabs);
   addAndMakeVisible(keyboard);
   addAndMakeVisible(aboutButton);
@@ -202,4 +211,5 @@ void GranularSynthAudioProcessorEditor::timerCallback() {
     modWheel.setValue(audioProcessor.getModulation(),
                       juce::dontSendNotification);
   }
+  keyboard.repaint();
 }
