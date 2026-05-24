@@ -19,6 +19,9 @@ FunctionEnd
 
 ; Pages
 !insertmacro MUI_PAGE_COMPONENTS
+
+; Standalone Directory selection
+!define MUI_PAGE_CUSTOMFUNCTION_PRE InstDirPre
 !insertmacro MUI_PAGE_DIRECTORY
 
 ; VST3 Directory selection
@@ -94,10 +97,18 @@ SectionEnd
   !insertmacro MUI_DESCRIPTION_TEXT ${SecVST3} "Installs the VST3 plugin."
 !insertmacro MUI_FUNCTION_DESCRIPTION_END
 
+Function InstDirPre
+  SectionGetFlags ${SecStandalone} $0
+  IntOp $0 $0 & ${SF_SELECTED}
+  StrCmp $0 ${SF_SELECTED} continue_instdir_page
+  Abort ; Skip page if Standalone not selected
+continue_instdir_page:
+FunctionEnd
+
 Function VST3DirPre
   SectionGetFlags ${SecVST3} $0
   IntOp $0 $0 & ${SF_SELECTED}
-  StrCmp $0 ${SF_SELECTED} continue_page
+  StrCmp $0 ${SF_SELECTED} continue_vst3_page
   Abort ; Skip page if VST3 not selected
-continue_page:
+continue_vst3_page:
 FunctionEnd
