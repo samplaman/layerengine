@@ -37,13 +37,6 @@ FunctionEnd
 
 !insertmacro MUI_LANGUAGE "English"
 
-Function VST3DirPre
-  SectionGetFlags ${SecVST3} $0
-  IntOp $0 $0 & ${SF_SELECTED}
-  StrCmp $0 ${SF_SELECTED} continue_page
-  Abort ; Skip page if VST3 not selected
-continue_page:
-FunctionEnd
 
 Section "Standalone Application" SecStandalone
     SetOutPath "$INSTDIR"
@@ -100,3 +93,11 @@ SectionEnd
   !insertmacro MUI_DESCRIPTION_TEXT ${SecStandalone} "Installs the standalone application."
   !insertmacro MUI_DESCRIPTION_TEXT ${SecVST3} "Installs the VST3 plugin."
 !insertmacro MUI_FUNCTION_DESCRIPTION_END
+
+Function VST3DirPre
+  SectionGetFlags ${SecVST3} $0
+  IntOp $0 $0 & ${SF_SELECTED}
+  StrCmp $0 ${SF_SELECTED} continue_page
+  Abort ; Skip page if VST3 not selected
+continue_page:
+FunctionEnd
