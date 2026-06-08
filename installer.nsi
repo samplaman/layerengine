@@ -14,7 +14,7 @@ Var VST3_DIR
 
 ; Initialization
 Function .onInit
-  StrCpy $VST3_DIR "$COMMONFILES\VST3"
+  StrCpy $VST3_DIR "$COMMONFILES32\VST3"
 FunctionEnd
 
 ; Pages
