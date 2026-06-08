@@ -114,7 +114,10 @@ jobs:
           $vst = Get-ChildItem -Path build/LayerEngine_artefacts -Directory -Filter "LayerEngine.vst3" -Recurse | Select-Object -First 1
           $exe = Get-ChildItem -Path build/LayerEngine_artefacts -Filter "LayerEngine.exe" -Recurse | Select-Object -First 1
           
-          if ($vst) { Copy-Item -Path $vst.FullName -Destination artifacts/ -Recurse -Force }
+          if ($vst) {
+              New-Item -ItemType Directory -Force -Path artifacts/LayerEngine.vst3
+              Copy-Item -Path "$($vst.FullName)\*" -Destination artifacts/LayerEngine.vst3/ -Recurse -Force
+          }
           if ($exe) { Copy-Item -Path $exe.FullName -Destination artifacts/ }
           # Package Artifacts directly into Zip
           Compress-Archive -Path artifacts/* -DestinationPath LayerEngine-Windows.zip
