@@ -1,5 +1,7 @@
 !include "MUI2.nsh"
 !include "Sections.nsh"
+!include "x64.nsh"
+!include "LogicLib.nsh"
 
 !define APP_NAME "LayerEngine"
 !define COMP_NAME "Eoin O Dowd"
@@ -7,14 +9,20 @@
 
 Name "${APP_NAME}"
 OutFile "LayerEngine-Installer.exe"
-InstallDir "$PROGRAMFILES\${APP_NAME}"
+InstallDir "$PROGRAMFILES64\${APP_NAME}"
 RequestExecutionLevel admin
 
 Var VST3_DIR
 
 ; Initialization
 Function .onInit
-  StrCpy $VST3_DIR "$COMMONFILES32\VST3"
+  ${Unless} ${RunningX64}
+    MessageBox MB_OK|MB_ICONSTOP "This application is 64-bit only and can only be installed on 64-bit Windows."
+    Abort
+  ${EndUnless}
+
+  SetRegView 64
+  StrCpy $VST3_DIR "$COMMONFILES64\VST3"
 FunctionEnd
 
 ; Pages
@@ -61,6 +69,8 @@ Section -Post
 SectionEnd
 
 Section "Uninstall"
+    SetRegView 64
+
     ; Remove Standalone
     Delete "$INSTDIR\LayerEngine.exe"
     Delete "$INSTDIR\uninstall.exe"

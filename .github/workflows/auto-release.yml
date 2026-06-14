@@ -46,7 +46,7 @@ jobs:
         run: cmake -B build -DCMAKE_BUILD_TYPE=Release -DJUCE_BUILD_EXTRAS=OFF
 
       - name: Build Plugin
-        run: cmake --build build --config Release --parallel $(nproc)
+        run: cmake --build build --config Release --parallel 4
 
       - name: Prepare Artifacts (Unix)
         if: runner.os != 'Windows'
@@ -119,7 +119,16 @@ jobs:
               Copy-Item -Path "$($vst.FullName)\*" -Destination artifacts/LayerEngine.vst3/ -Recurse -Force
           }
           if ($exe) { Copy-Item -Path $exe.FullName -Destination artifacts/ }
-          # Package Artifacts directly into Zip
+          
+          # Build Installer
+          makensis installer.nsi
+          
+          # Package Installer into Zip
+          New-Item -ItemType Directory -Force -Path installer_dist
+          Copy-Item -Path LayerEngine-Installer.exe -Destination installer_dist/
+          Compress-Archive -Path installer_dist/* -DestinationPath LayerEngine-Windows-Installer.zip
+          
+          # Package Portable Artifacts directly into Zip
           Compress-Archive -Path artifacts/* -DestinationPath LayerEngine-Windows.zip
 
       - name: Upload Artifact
@@ -179,6 +188,7 @@ jobs:
             LayerEngine-Linux/LayerEngine-Linux.clap
             LayerEngine-macOS/LayerEngine-macOS.zip
             LayerEngine-Windows/LayerEngine-Windows.zip
+            LayerEngine-Windows/LayerEngine-Windows-Installer.zip
           draft: false
           prerelease: ${{ env.IS_PRERELEASE }}
         env:
