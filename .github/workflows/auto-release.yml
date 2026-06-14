@@ -121,7 +121,11 @@ jobs:
           if ($exe) { Copy-Item -Path $exe.FullName -Destination artifacts/ }
           
           # Build Installer
-          makensis installer.nsi
+          if (Test-Path "C:\Program Files (x86)\NSIS\makensis.exe") {
+              & "C:\Program Files (x86)\NSIS\makensis.exe" installer.nsi
+          } else {
+              makensis installer.nsi
+          }
           
           # Package Installer into Zip
           New-Item -ItemType Directory -Force -Path installer_dist
