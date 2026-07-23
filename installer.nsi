@@ -50,8 +50,8 @@ Section "Standalone Application" SecStandalone
 SectionEnd
 
 Section "VST3 Plugin" SecVST3
-    SetOutPath "$VST3_DIR\LayerEngine.vst3"
-    File /r "artifacts\LayerEngine.vst3\*.*"
+    SetOutPath "$VST3_DIR"
+    File "artifacts\LayerEngine.vst3"
     
     ; Save VST3 path to registry for uninstaller
     WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\${APP_NAME}" "VST3Dir" "$VST3_DIR"
@@ -84,7 +84,7 @@ Section "Uninstall"
     ; Remove VST3
     ReadRegStr $0 HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\${APP_NAME}" "VST3Dir"
     StrCmp $0 "" no_vst3
-    RMDir /r "$0\LayerEngine.vst3"
+    Delete "$0\LayerEngine.vst3"
   no_vst3:
     
     ; Remove Registry entries

@@ -115,15 +115,11 @@ jobs:
         shell: pwsh
         run: |
           New-Item -ItemType Directory -Force -Path artifacts
-          $vst = Get-ChildItem -Path build/LayerEngine_artefacts -Directory -Filter "LayerEngine.vst3" -Recurse | Select-Object -First 1
+          $vst = Get-ChildItem -Path build/LayerEngine_artefacts -File -Filter "LayerEngine.vst3" -Recurse | Select-Object -First 1
           $exe = Get-ChildItem -Path build/LayerEngine_artefacts -Filter "LayerEngine.exe" -Recurse | Select-Object -First 1
           
           if ($vst) {
-              # robocopy /E copies everything including hidden/system files (Copy-Item wildcards skip them)
-              New-Item -ItemType Directory -Force -Path artifacts/LayerEngine.vst3
-              robocopy "$($vst.FullName)" "artifacts\LayerEngine.vst3" /E | Out-Null
-              # robocopy returns 1 on success - normalise to 0 so PowerShell doesn't treat it as an error
-              if ($LASTEXITCODE -le 7) { $global:LASTEXITCODE = 0 } else { throw "robocopy failed (exit $LASTEXITCODE)" }
+              Copy-Item -Path $vst.FullName -Destination artifacts/
           }
           if ($exe) { Copy-Item -Path $exe.FullName -Destination artifacts/ }
           
@@ -138,12 +134,9 @@ jobs:
           # Package Portable Artifacts (Standalone + VST3) into Zip
           Compress-Archive -Path artifacts/* -DestinationPath LayerEngine-Windows.zip
 
-          # Package VST3 alone into its own Zip (use robocopy so hidden bundle files are included)
+          # Package VST3 alone into its own Zip
           if ($vst) {
-              New-Item -ItemType Directory -Force -Path "vst3_dist\LayerEngine.vst3"
-              robocopy "$($vst.FullName)" "vst3_dist\LayerEngine.vst3" /E | Out-Null
-              if ($LASTEXITCODE -le 7) { $global:LASTEXITCODE = 0 } else { throw "robocopy failed (exit $LASTEXITCODE)" }
-              Compress-Archive -Path "vst3_dist\LayerEngine.vst3" -DestinationPath LayerEngine-Windows-VST3.zip
+              Compress-Archive -Path $vst.FullName -DestinationPath LayerEngine-Windows-VST3.zip
           }
 
       - name: Upload Artifact
