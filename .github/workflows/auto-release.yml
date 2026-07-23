@@ -119,8 +119,9 @@ jobs:
           $exe = Get-ChildItem -Path build/LayerEngine_artefacts -Filter "LayerEngine.exe" -Recurse | Select-Object -First 1
           
           if ($vst) {
+              # robocopy /E copies everything including hidden/system files (Copy-Item wildcards skip them)
               New-Item -ItemType Directory -Force -Path artifacts/LayerEngine.vst3
-              Copy-Item -Path "$($vst.FullName)\*" -Destination artifacts/LayerEngine.vst3/ -Recurse -Force
+              robocopy "$($vst.FullName)" "artifacts\LayerEngine.vst3" /E | Out-Null
           }
           if ($exe) { Copy-Item -Path $exe.FullName -Destination artifacts/ }
           
@@ -135,11 +136,11 @@ jobs:
           # Package Portable Artifacts (Standalone + VST3) into Zip
           Compress-Archive -Path artifacts/* -DestinationPath LayerEngine-Windows.zip
 
-          # Package VST3 alone into its own Zip
+          # Package VST3 alone into its own Zip (use robocopy so hidden bundle files are included)
           if ($vst) {
-              New-Item -ItemType Directory -Force -Path vst3_dist
-              Copy-Item -Path "$($vst.FullName)" -Destination vst3_dist/ -Recurse -Force
-              Compress-Archive -Path vst3_dist/* -DestinationPath LayerEngine-Windows-VST3.zip
+              New-Item -ItemType Directory -Force -Path "vst3_dist\LayerEngine.vst3"
+              robocopy "$($vst.FullName)" "vst3_dist\LayerEngine.vst3" /E | Out-Null
+              Compress-Archive -Path "vst3_dist\LayerEngine.vst3" -DestinationPath LayerEngine-Windows-VST3.zip
           }
 
       - name: Upload Artifact
