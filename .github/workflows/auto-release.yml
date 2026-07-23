@@ -106,6 +106,10 @@ jobs:
 
 
 
+      - name: Install NSIS (Windows)
+        if: runner.os == 'Windows'
+        run: choco install nsis -y --no-progress
+
       - name: Prepare Artifacts (Windows)
         if: runner.os == 'Windows'
         shell: pwsh
@@ -121,11 +125,7 @@ jobs:
           if ($exe) { Copy-Item -Path $exe.FullName -Destination artifacts/ }
           
           # Build Installer
-          if (Test-Path "C:\Program Files (x86)\NSIS\makensis.exe") {
-              & "C:\Program Files (x86)\NSIS\makensis.exe" installer.nsi
-          } else {
-              makensis installer.nsi
-          }
+          & "C:\Program Files (x86)\NSIS\makensis.exe" installer.nsi
           
           # Package Installer into Zip
           New-Item -ItemType Directory -Force -Path installer_dist
