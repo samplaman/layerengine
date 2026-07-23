@@ -122,6 +122,8 @@ jobs:
               # robocopy /E copies everything including hidden/system files (Copy-Item wildcards skip them)
               New-Item -ItemType Directory -Force -Path artifacts/LayerEngine.vst3
               robocopy "$($vst.FullName)" "artifacts\LayerEngine.vst3" /E | Out-Null
+              # robocopy returns 1 on success - normalise to 0 so PowerShell doesn't treat it as an error
+              if ($LASTEXITCODE -le 7) { $global:LASTEXITCODE = 0 } else { throw "robocopy failed (exit $LASTEXITCODE)" }
           }
           if ($exe) { Copy-Item -Path $exe.FullName -Destination artifacts/ }
           
@@ -140,6 +142,7 @@ jobs:
           if ($vst) {
               New-Item -ItemType Directory -Force -Path "vst3_dist\LayerEngine.vst3"
               robocopy "$($vst.FullName)" "vst3_dist\LayerEngine.vst3" /E | Out-Null
+              if ($LASTEXITCODE -le 7) { $global:LASTEXITCODE = 0 } else { throw "robocopy failed (exit $LASTEXITCODE)" }
               Compress-Archive -Path "vst3_dist\LayerEngine.vst3" -DestinationPath LayerEngine-Windows-VST3.zip
           }
 
