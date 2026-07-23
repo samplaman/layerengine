@@ -132,8 +132,15 @@ jobs:
           Copy-Item -Path LayerEngine-Installer.exe -Destination installer_dist/
           Compress-Archive -Path installer_dist/* -DestinationPath LayerEngine-Windows-Installer.zip
           
-          # Package Portable Artifacts directly into Zip
+          # Package Portable Artifacts (Standalone + VST3) into Zip
           Compress-Archive -Path artifacts/* -DestinationPath LayerEngine-Windows.zip
+
+          # Package VST3 alone into its own Zip
+          if ($vst) {
+              New-Item -ItemType Directory -Force -Path vst3_dist
+              Copy-Item -Path "$($vst.FullName)" -Destination vst3_dist/ -Recurse -Force
+              Compress-Archive -Path vst3_dist/* -DestinationPath LayerEngine-Windows-VST3.zip
+          }
 
       - name: Upload Artifact
         uses: actions/upload-artifact@v4
@@ -142,6 +149,7 @@ jobs:
           path: |
             LayerEngine-*.zip
             LayerEngine-*.clap
+          if-no-files-found: warn
 
   release:
     name: Create Release
@@ -192,6 +200,7 @@ jobs:
             LayerEngine-Linux/LayerEngine-Linux.clap
             LayerEngine-macOS/LayerEngine-macOS.zip
             LayerEngine-Windows/LayerEngine-Windows.zip
+            LayerEngine-Windows/LayerEngine-Windows-VST3.zip
             LayerEngine-Windows/LayerEngine-Windows-Installer.zip
           draft: false
           prerelease: ${{ env.IS_PRERELEASE }}
