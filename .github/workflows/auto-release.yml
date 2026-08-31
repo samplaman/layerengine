@@ -48,6 +48,19 @@ jobs:
       - name: Build Plugin
         run: cmake --build build --config Release --parallel 4
 
+      - name: Import Apple Certificate
+        if: runner.os == 'macOS'
+        env:
+          CERTIFICATE_P12: ${{ secrets.CERTIFICATE_P12 }}
+          CERTIFICATE_PASSWORD: ${{ secrets.CERTIFICATE_PASSWORD }}
+        run: |
+          # Create temporary keychain
+          security create-keychain -p "" build.keychain
+          security import <(echo $CERTIFICATE_P12 | base64 --decode) -f pkcs12 -k build.keychain -P $CERTIFICATE_PASSWORD -T /usr/bin/codesign
+          security list-keychains -d user -s build.keychain
+          security unlock-keychain -p "" build.keychain
+          security set-key-partition-list -S apple-tool:,apple: -s -k "" build.keychain
+
       - name: Prepare Artifacts (Unix)
         if: runner.os != 'Windows'
         run: |
@@ -73,6 +86,17 @@ jobs:
           if [ "${{ matrix.platform }}" = "macOS" ]; then
             chmod +x build_mac_installer.sh
             ./build_mac_installer.sh
+            
+            # Notarize
+            xcrun notarytool submit LayerEngine-Installer.pkg \
+              --apple-id "${{ secrets.APPLE_ID }}" \
+              --password "${{ secrets.APPLE_NOTARIZATION_PASSWORD }}" \
+              --team-id "${{ secrets.APPLE_TEAM_ID }}" \
+              --wait
+            
+            # Staple
+            xcrun stapler staple LayerEngine-Installer.pkg
+            
             mkdir -p final_zip
             cp LayerEngine-Installer.pkg final_zip/
             cd final_zip && zip -r ../LayerEngine-macOS.zip .

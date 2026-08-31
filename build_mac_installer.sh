@@ -8,14 +8,20 @@ mkdir -p mac_pkg/root/Applications
 
 # Copy built artifacts into the root structure
 if [ -d "artifacts/LayerEngine.vst3" ]; then
+    # Sign the VST3 bundle
+    codesign --sign "Developer ID Application: ${{ secrets.APPLE_DEVELOPER_ID }}" --options runtime --force --deep "artifacts/LayerEngine.vst3"
     cp -R "artifacts/LayerEngine.vst3" mac_pkg/root/Library/Audio/Plug-Ins/VST3/
 fi
 
 if [ -d "artifacts/LayerEngine.component" ]; then
+    # Sign the AU bundle
+    codesign --sign "Developer ID Application: ${{ secrets.APPLE_DEVELOPER_ID }}" --options runtime --force --deep "artifacts/LayerEngine.component"
     cp -R "artifacts/LayerEngine.component" mac_pkg/root/Library/Audio/Plug-Ins/Components/
 fi
 
 if [ -d "artifacts/LayerEngine.app" ]; then
+    # Sign the App
+    codesign --sign "Developer ID Application: ${{ secrets.APPLE_DEVELOPER_ID }}" --options runtime --force --deep "artifacts/LayerEngine.app"
     cp -R "artifacts/LayerEngine.app" mac_pkg/root/Applications/
 fi
 
