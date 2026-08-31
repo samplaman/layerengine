@@ -60,6 +60,9 @@ jobs:
           security list-keychains -d user -s build.keychain
           security unlock-keychain -p "" build.keychain
           security set-key-partition-list -S apple-tool:,apple: -s -k "" build.keychain
+          
+          # Debug: List available identities to verify import
+          security find-identity -v -p codesigning
 
       - name: Prepare Artifacts (Unix)
         if: runner.os != 'Windows'
